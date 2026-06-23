@@ -726,7 +726,9 @@ async function loadData(stil = false) {
       data.spelers = Array.from(gezien.values());
       data.sessies = (sesRaw || []).map(sessieVanDB);
       if (verwijderIds.length) {
-        sb.from('spelers').delete().in('id', verwijderIds).catch(() => {});
+        // Let op: de query-builder is "thenable" maar heeft geen .catch().
+        // Daarom wrappen we 'm in Promise.resolve() voordat we .catch() gebruiken.
+        Promise.resolve(sb.from('spelers').delete().in('id', verwijderIds)).catch(() => {});
       }
       localStorage.setItem('pokersaldo_v4', JSON.stringify(data));
     } else {
