@@ -546,17 +546,18 @@ let recentOpslagTijd = 0;
 // CONSTANTEN
 // ═══════════════════════════════════════════════════════════
 
+// Vaste IDs zodat twee apparaten nooit dubbele rijen in Supabase aanmaken
 const STANDAARD_SPELERS = [
-  { naam: 'Tobias',  start:  52.86 },
-  { naam: 'Sebas',   start:  41.57 },
-  { naam: 'Tom',     start:  21.17 },
-  { naam: 'Dees',    start:  18.00 },
-  { naam: 'Joris',   start:   8.39 },
-  { naam: 'Ghost',   start:   0.63 },
-  { naam: 'Faye',    start:  -4.27 },
-  { naam: 'Tijn',    start: -10.00 },
-  { naam: 'Reinier', start: -13.87 },
-  { naam: 'Morris',  start: -102.43 },
+  { id: 'sp-tobias',  naam: 'Tobias',  start:  52.86 },
+  { id: 'sp-sebas',   naam: 'Sebas',   start:  41.57 },
+  { id: 'sp-tom',     naam: 'Tom',     start:  21.17 },
+  { id: 'sp-dees',    naam: 'Dees',    start:  18.00 },
+  { id: 'sp-joris',   naam: 'Joris',   start:   8.39 },
+  { id: 'sp-ghost',   naam: 'Ghost',   start:   0.63 },
+  { id: 'sp-faye',    naam: 'Faye',    start:  -4.27 },
+  { id: 'sp-tijn',    naam: 'Tijn',    start: -10.00 },
+  { id: 'sp-reinier', naam: 'Reinier', start: -13.87 },
+  { id: 'sp-morris',  naam: 'Morris',  start: -102.43 },
 ];
 
 const CHALLENGES = [
@@ -663,9 +664,30 @@ async function loadData() {
     if (spErr || sesErr) throw spErr || sesErr;
 
     if (spRaw && spRaw.length > 0) {
-      // Supabase heeft data
-      data.spelers = spRaw;
+      // Supabase heeft data — dedupliceer op naam voor het geval twee
+      // apparaten ooit tegelijk initialiseerden met verschillende IDs
+      const gezien = new Map();
+      const verwijderIds = [];
+      spRaw.forEach(s => {
+        if (!gezien.has(s.naam)) {
+          gezien.set(s.naam, s);
+        } else {
+          // Bewaar de entry met het vaste standaard-ID; verwijder de rest
+          const bestaande = gezien.get(s.naam);
+          const stdId = STANDAARD_SPELERS.find(x => x.naam === s.naam)?.id;
+          if (stdId && s.id === stdId) {
+            verwijderIds.push(bestaande.id);
+            gezien.set(s.naam, s);
+          } else {
+            verwijderIds.push(s.id);
+          }
+        }
+      });
+      data.spelers = Array.from(gezien.values());
       data.sessies = (sesRaw || []).map(sessieVanDB);
+      if (verwijderIds.length) {
+        sb.from('spelers').delete().in('id', verwijderIds).catch(() => {});
+      }
       localStorage.setItem('pokersaldo_v4', JSON.stringify(data));
     } else {
       // Supabase leeg of nog niet ingericht — laad uit localStorage
@@ -677,18 +699,17 @@ async function loadData() {
 
       STANDAARD_SPELERS.forEach(sp => {
         if (!data.spelers.some(s => s.naam === sp.naam))
-          data.spelers.push({ id: uid(), naam: sp.naam, start: sp.start });
+          data.spelers.push({ id: sp.id, naam: sp.naam, start: sp.start });
       });
-      // Probeer te migreren naar Supabase; geen fout als het mislukt
       _slaDataNaarSupabase().catch(err => console.warn('Supabase niet beschikbaar:', err?.message));
       localStorage.setItem('pokersaldo_v4', JSON.stringify(data));
     }
 
-    // Standaardspelers altijd aanwezig houden
+    // Standaardspelers altijd aanwezig houden (met vaste IDs)
     let nieuw = false;
     STANDAARD_SPELERS.forEach(sp => {
       if (!data.spelers.some(s => s.naam === sp.naam)) {
-        data.spelers.push({ id: uid(), naam: sp.naam, start: sp.start });
+        data.spelers.push({ id: sp.id, naam: sp.naam, start: sp.start });
         nieuw = true;
       }
     });
@@ -766,7 +787,7 @@ function migreerV3(v3) {
 
 function maakStandaard() {
   data = {
-    spelers: STANDAARD_SPELERS.map(s => ({ id: uid(), naam: s.naam, start: s.start })),
+    spelers: STANDAARD_SPELERS.map(s => ({ id: s.id, naam: s.naam, start: s.start })),
     sessies: []
   };
 }
