@@ -2,10 +2,29 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Vaste schaal: geen pinch-zoom en geen dubbeltik-zoom.
+       viewport-fit=cover is nodig zodat env(safe-area-inset-*) werkt op telefoons met notch. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Pokersaldo</title>
+
+  <!-- PWA: manifest + browser/thema-kleur (donker) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0d1117">
+
+  <!-- iOS: open zonder browserbalk als 'standalone' app vanaf het beginscherm -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pokersaldo">
+  <link rel="apple-touch-icon" href="icon-512.png">
+
+  <!-- Android/Chrome: idem standalone + favicon -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="icon" type="image/png" href="icon-512.png">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;  /* weg met de grijze/blauwe tik-flits */
+    }
 
     :root {
       --bg:       #0d1117;
@@ -32,14 +51,26 @@
       font-size: 16px;
       line-height: 1.5;
       -webkit-text-size-adjust: 100%;
+      overscroll-behavior: none;        /* geen rubberband/bounce voorbij de schermrand */
+      -webkit-user-select: none;        /* geen per-ongeluk tekstselectie op de interface */
+      user-select: none;
+      touch-action: manipulation;       /* schakelt de dubbeltik-zoom uit */
+    }
+    /* Invoervelden moeten WEL selecteerbaar/bewerkbaar blijven */
+    input, textarea, select, [contenteditable] {
+      -webkit-user-select: text;
+      user-select: text;
     }
 
-    #app { max-width: 600px; margin: 0 auto; min-height: 100vh; }
+    /* Volle hoogte; dvh volgt de echte zichtbare hoogte als de adresbalk verschijnt/verdwijnt */
+    #app { max-width: 600px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
 
     header {
       background: var(--surf);
       border-bottom: 1px solid var(--rand);
       padding: 13px 16px;
+      /* Onder de notch/statusbalk vallen (status bar = black-translucent op iOS) */
+      padding-top: calc(13px + env(safe-area-inset-top));
       position: sticky;
       top: 0;
       z-index: 50;
@@ -49,7 +80,8 @@
     }
     header h1 { font-size: 18px; font-weight: 700; color: var(--acc); letter-spacing: .3px; }
 
-    .pagina { display: none; padding: 14px 12px calc(var(--nav-h) + 18px); }
+    /* Onderaan ruimte voor de nav én de home-indicator (safe-area) */
+    .pagina { display: none; padding: 14px 12px calc(var(--nav-h) + 18px + env(safe-area-inset-bottom)); }
     .pagina.actief { display: block; }
 
     nav {
@@ -57,7 +89,9 @@
       bottom: 0; left: 50%;
       transform: translateX(-50%);
       width: 100%; max-width: 600px;
-      height: var(--nav-h);
+      /* Knoppen blijven op nav-hoogte; de balk loopt door tot achter de home-indicator */
+      height: calc(var(--nav-h) + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
       background: var(--surf);
       border-top: 1px solid var(--rand);
       display: flex;
@@ -78,6 +112,7 @@
     }
     .nav-k.actief { color: var(--acc); }
     .nav-k svg { width: 22px; height: 22px; }
+    .nav-k:active { transform: scale(.9); }   /* voelbare "ingedrukt"-reactie */
 
     .k {
       background: var(--surf);
@@ -411,7 +446,7 @@
     }
 
     @media (min-width: 600px) {
-      .pagina { padding: 18px 18px calc(var(--nav-h) + 20px); }
+      .pagina { padding: 18px 18px calc(var(--nav-h) + 20px + env(safe-area-inset-bottom)); }
     }
   </style>
 </head>
@@ -1617,6 +1652,8 @@ function navigeer(pagina) {
   if (pagina === 'sessies')     renderSessies();
   if (pagina === 'challenges')  renderChallenges();
   if (pagina === 'leaderboard') renderLeaderboard();
+  // Onthoud de huidige pagina, zodat je na een refresh hier terugkomt
+  try { localStorage.setItem('pokersaldo_pagina', pagina); } catch(e) {}
 }
 
 function vraagReset()  { document.getElementById('reset-modal').classList.add('aan'); }
@@ -1647,10 +1684,23 @@ function renderAlles() {
   if (actief === 'p-leaderboard') renderLeaderboard();
 }
 
-// Async opstarten: eerst data ophalen, dan renderen, dan realtime aanzetten
+// Vang pinch-zoom af op iOS Safari (negeert soms user-scalable=no).
+// Alleen op touch-apparaten, zodat desktop (trackpad/Ctrl+scroll) gewoon kan zoomen.
+if (window.matchMedia('(pointer: coarse)').matches) {
+  document.addEventListener('gesturestart', e => e.preventDefault());
+}
+
+// Async opstarten: data ophalen, dan naar de laatst bekeken pagina, dan realtime
 (async () => {
   await loadData();
-  renderAlles();
+  // Herstel de laatst bekeken pagina (blijf na refresh op dezelfde tab)
+  const geldig = ['spel', 'sessies', 'challenges', 'leaderboard'];
+  let start = 'spel';
+  try {
+    const p = localStorage.getItem('pokersaldo_pagina');
+    if (geldig.includes(p)) start = p;
+  } catch(e) {}
+  navigeer(start);
   setupRealtime();
 })();
 </script>
