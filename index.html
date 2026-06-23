@@ -700,7 +700,7 @@ async function loadData() {
 
   } catch(e) {
     console.error('Laden mislukt:', e);
-    toonFout('Kan data niet laden — controleer je verbinding.');
+    toonFout('Supabase fout: ' + (e?.message || e?.code || JSON.stringify(e)));
     // Noodoplossing: probeer localStorage als fallback
     try {
       const v4raw = localStorage.getItem('pokersaldo_v4');
