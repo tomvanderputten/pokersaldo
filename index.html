@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokersaldo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surf:     #161b27;
+      --surf2:    #1d2438;
+      --rand:     #252e42;
+      --tekst:    #dde3f0;
+      --zacht:    #6e7a94;
+      --acc:      #f0a428;
+      --acc-bg:   rgba(240,164,40,.12);
+      --groen:    #2ddb7c;
+      --groen-bg: rgba(45,219,124,.1);
+      --rood:     #ff5a5a;
+      --rood-bg:  rgba(255,90,90,.1);
+      --nav-h:    62px;
+      --r:        14px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--tekst);
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    #app { max-width: 600px; margin: 0 auto; min-height: 100vh; }
+
+    header {
+      background: var(--surf);
+      border-bottom: 1px solid var(--rand);
+      padding: 13px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 18px; font-weight: 700; color: var(--acc); letter-spacing: .3px; }
+
+    .pagina { display: none; padding: 14px 12px calc(var(--nav-h) + 18px); }
+    .pagina.actief { display: block; }
+
+    nav {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%; max-width: 600px;
+      height: var(--nav-h);
+      background: var(--surf);
+      border-top: 1px solid var(--rand);
+      display: flex;
+      z-index: 50;
+    }
+    .nav-k {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px;
+      background: none; border: none;
+      cursor: pointer;
+      color: var(--zacht);
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .04em;
+      -webkit-tap-highlight-color: transparent;
+      transition: color .15s;
+    }
+    .nav-k.actief { color: var(--acc); }
+    .nav-k svg { width: 22px; height: 22px; }
+
+    .k {
+      background: var(--surf);
+      border: 1px solid var(--rand);
+      border-radius: var(--r);
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .k-titel {
+      font-size: 11px; font-weight: 700;
+      color: var(--zacht);
+      text-transform: uppercase; letter-spacing: .07em;
+      margin-bottom: 10px;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 11px 16px;
+      font-size: 15px; font-weight: 600;
+      border: none; border-radius: 8px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity .15s, transform .1s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+    .btn-acc  { background: var(--acc);     color: #0d1117; }
+    .btn-rood { background: var(--rood-bg); color: var(--rood); }
+    .btn-grijs{ background: var(--surf2);   color: var(--tekst); }
+    .btn-vol  { width: 100%; }
+
+    .veld {
+      width: 100%;
+      padding: 11px 13px;
+      font-size: 16px;
+      border: 1.5px solid var(--rand);
+      border-radius: 8px;
+      background: var(--surf2);
+      color: var(--tekst);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .veld:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(240,164,40,.15); }
+    .veld::placeholder { color: var(--zacht); }
+
+    .eur-wrap { position: relative; flex: 1; }
+    .eur-wrap::before {
+      content: '€';
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--zacht); pointer-events: none;
+    }
+    .eur-wrap .veld { padding-left: 26px; }
+
+    select.veld {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e7a94' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 16px;
+      padding-right: 30px;
+    }
+    select.veld option { background: var(--surf2); }
+
+    .rij { display: flex; gap: 8px; align-items: stretch; }
+    .rij .veld, .rij .eur-wrap { flex: 1; }
+
+    .mel { padding: 10px 13px; border-radius: 8px; font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+    .mel-warn { background: rgba(240,164,40,.1);  border: 1px solid rgba(240,164,40,.35); color: #ffc45a; }
+    .mel-ok   { background: var(--groen-bg);       border: 1px solid rgba(45,219,124,.3);  color: var(--groen); }
+    .mel-err  { background: var(--rood-bg);         border: 1px solid rgba(255,90,90,.3);   color: var(--rood); }
+
+    .sub-lbl {
+      font-size: 11px; font-weight: 700;
+      color: var(--zacht);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin: 12px 0 6px;
+    }
+
+    .x-btn {
+      background: none; border: none;
+      cursor: pointer; color: var(--zacht);
+      padding: 3px 6px; font-size: 14px;
+      border-radius: 4px;
+      -webkit-tap-highlight-color: transparent;
+      line-height: 1;
+    }
+    .x-btn:hover { color: var(--rood); }
+
+    .pot-balk {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 11px 13px;
+      background: var(--surf2); border-radius: 8px;
+      margin-top: 4px;
+    }
+
+    .hist-rij {
+      display: flex; align-items: flex-start;
+      justify-content: space-between;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--rand);
+      font-size: 14px; gap: 8px;
+    }
+    .hist-rij:last-child { border-bottom: none; }
+
+    .lb-rij {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--rand);
+    }
+    .lb-rij:last-child { border-bottom: none; }
+    .lb-pos {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      background: var(--surf2); color: var(--zacht);
+      flex-shrink: 0;
+    }
+    .lb-pos.goud { background: var(--acc-bg); color: var(--acc); font-size: 16px; }
+    .lb-naam   { flex: 1; font-weight: 600; font-size: 15px; }
+    .lb-bedrag { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .pos { color: var(--groen); }
+    .neg { color: var(--rood); }
+    .nul { color: var(--zacht); }
+
+    .leeg { text-align: center; padding: 32px 16px; color: var(--zacht); font-size: 14px; }
+
+    .modal-bg {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 100;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-bg.aan { display: flex; }
+    .modal {
+      background: var(--surf);
+      border: 1px solid var(--rand);
+      border-radius: 16px 16px 0 0;
+      padding: 22px 16px 36px;
+      width: 100%; max-width: 600px;
+    }
+    .modal h3 { font-size: 18px; margin-bottom: 6px; }
+    .modal p  { color: var(--zacht); font-size: 15px; margin-bottom: 18px; }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns .btn { flex: 1; }
+
+    /* ── Spel sub-tabs ── */
+    .spel-tabs {
+      display: flex; background: var(--surf2);
+      border-radius: 10px; padding: 3px; margin-bottom: 14px;
+    }
+    .spel-tab {
+      flex: 1; padding: 9px;
+      font-size: 14px; font-weight: 600;
+      border: none; border-radius: 8px;
+      background: none; color: var(--zacht);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .spel-tab.actief { background: var(--surf); color: var(--tekst); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+    .spel-sectie { display: none; }
+    .spel-sectie.actief { display: block; }
+
+    /* ── Inkoop-kaarten ── */
+    .ink-kaart {
+      background: var(--surf);
+      border: 1px solid var(--rand);
+      border-radius: var(--r);
+      padding: 12px 14px; margin-bottom: 8px;
+    }
+    .ink-kop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .ink-naam   { font-size: 16px; font-weight: 700; }
+    .ink-totaal { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .snelknop-rij { display: flex; gap: 6px; align-items: stretch; flex-wrap: wrap; }
+    .snelknop {
+      padding: 10px 13px; font-size: 14px; font-weight: 700;
+      background: var(--surf2); color: var(--tekst);
+      border: 1.5px solid var(--rand); border-radius: 8px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: border-color .12s, color .12s, background .12s;
+      white-space: nowrap;
+    }
+    .snelknop:hover  { border-color: var(--acc); color: var(--acc); }
+    .snelknop:active { background: var(--acc-bg); border-color: var(--acc); color: var(--acc); transform: scale(.96); }
+
+    .ink-eigen { display: flex; gap: 6px; flex: 1; min-width: 160px; }
+    .ink-eigen .eur-wrap { flex: 1; }
+
+    .ink-items {
+      margin-top: 10px; padding-top: 8px;
+      border-top: 1px solid var(--rand);
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .ink-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 9px;
+      background: var(--surf2); border: 1px solid var(--rand);
+      border-radius: 20px; font-size: 13px; color: var(--zacht);
+    }
+    .ink-chip .x-btn { padding: 0 2px; font-size: 12px; }
+
+    /* ── Uitcash-kaarten ── */
+    .uit-kaart { padding: 12px 0; border-bottom: 1px solid var(--rand); }
+    .uit-kaart:last-child { border-bottom: none; }
+    .uit-kop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .uit-naam  { font-weight: 600; font-size: 15px; }
+    .uit-sub   { font-size: 12px; color: var(--zacht); margin-top: 1px; }
+    .uit-netto { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    /* ── Deelnemers checkboxes ── */
+    .deeln-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 6px; margin-bottom: 12px;
+    }
+    .deeln-label {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 12px;
+      background: var(--surf2); border: 1.5px solid var(--rand);
+      border-radius: 8px; cursor: pointer;
+      font-size: 14px; font-weight: 600;
+      transition: border-color .12s, background .12s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .deeln-label:has(input:checked) { border-color: var(--acc); background: var(--acc-bg); }
+    .deeln-label input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: var(--acc); flex-shrink: 0;
+    }
+
+    /* ── Sessie header (actieve sessie) ── */
+    .sessie-hdr {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 12px 14px;
+      background: var(--surf); border: 1px solid var(--rand);
+      border-radius: var(--r); margin-bottom: 12px;
+    }
+    .sessie-naam { font-size: 15px; font-weight: 700; }
+    .sessie-meta { font-size: 12px; color: var(--zacht); margin-top: 3px; }
+
+    /* ── Sessie-kaarten (geschiedenis) ── */
+    .sessie-kaart {
+      background: var(--surf); border: 1px solid var(--rand);
+      border-radius: var(--r); padding: 14px; margin-bottom: 10px;
+    }
+    .sessie-kaart-kop { display: flex; justify-content: space-between; align-items: flex-start; }
+    .sessie-kaart-naam { font-weight: 700; font-size: 15px; }
+    .badge {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: .05em;
+      flex-shrink: 0;
+    }
+    .badge-actief { background: var(--acc-bg);   color: var(--acc); }
+    .badge-klaar  { background: var(--groen-bg); color: var(--groen); }
+
+    /* ── Challenges tier-headers ── */
+    .tier-hdr { display: flex; align-items: center; gap: 10px; margin: 14px 0 6px; }
+    .tier-prijs {
+      font-size: 12px; font-weight: 700;
+      color: var(--acc); background: var(--acc-bg);
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .tier-lijn { flex: 1; height: 1px; background: var(--rand); }
+    .chal-item { padding: 8px 0; border-bottom: 1px solid var(--rand); font-size: 14px; }
+    .chal-item:last-child { border-bottom: none; }
+
+    /* ── Settlement ── */
+    .verr-rij {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 0; border-bottom: 1px solid var(--rand); font-size: 15px;
+    }
+    .verr-rij:last-child { border-bottom: none; }
+    .betaal-rij {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px; background: var(--surf2);
+      border-radius: 8px; font-size: 14px; margin-bottom: 6px;
+    }
+    .betaal-pijl { color: var(--acc); font-size: 16px; }
+
+    /* ── Laad-overlay (eerste verbinding) ── */
+    #laad-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(13,17,23,.9);
+      z-index: 200;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px;
+      font-size: 15px; color: var(--zacht);
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--rand);
+      border-top-color: var(--acc);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Fout-toast (netwerk/opslagfout) ── */
+    #fout-toast {
+      display: none;
+      position: fixed; top: 70px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--rood-bg);
+      border: 1px solid rgba(255,90,90,.4);
+      color: var(--rood);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 150;
+      max-width: 90%; text-align: center;
+    }
+
+    @media (min-width: 600px) {
+      .pagina { padding: 18px 18px calc(var(--nav-h) + 20px); }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>Pokersaldo</h1>
+    <button class="btn btn-rood" style="padding:7px 12px;font-size:13px;" onclick="vraagReset()">Wis alles</button>
+  </header>
+
+  <!-- ══ PAGINA 1: SPEL ══ -->
+  <div class="pagina actief" id="p-spel">
+    <div id="spel-inhoud"></div>
+  </div>
+
+  <!-- ══ PAGINA 2: SESSIES ══ -->
+  <div class="pagina" id="p-sessies">
+    <div id="sessies-inhoud"></div>
+  </div>
+
+  <!-- ══ PAGINA 3: CHALLENGES ══ -->
+  <div class="pagina" id="p-challenges">
+    <div class="k">
+      <div class="k-titel">Challenge kopen</div>
+      <div class="rij" style="margin-bottom:8px;">
+        <select class="veld" id="ch-koper" onchange="updateChallDropdown()">
+          <option value="">Wie koopt?</option>
+        </select>
+        <select class="veld" id="ch-ontv">
+          <option value="">Voor wie?</option>
+        </select>
+      </div>
+      <div style="margin-bottom:8px;">
+        <select class="veld" id="ch-keuze">
+          <option value="">Kies challenge...</option>
+        </select>
+      </div>
+      <div id="ch-mel"></div>
+      <button class="btn btn-acc btn-vol" onclick="koopChallenge()">Koop challenge</button>
+    </div>
+    <div class="k">
+      <div class="k-titel">Alle challenges</div>
+      <div id="ch-catalogus"></div>
+    </div>
+    <div class="k">
+      <div class="k-titel">Gekochte challenges</div>
+      <div id="ch-historie"></div>
+    </div>
+  </div>
+
+  <!-- ══ PAGINA 4: LEADERBOARD ══ -->
+  <div class="pagina" id="p-leaderboard">
+    <div class="k">
+      <div id="lb-inhoud"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Laad-overlay: verschijnt tijdens eerste verbinding met Supabase -->
+<div id="laad-overlay">
+  <div class="spinner"></div>
+  <div>Verbinding maken...</div>
+</div>
+
+<!-- Fout-toast: korte melding bij netwerk- of opslagfout -->
+<div id="fout-toast"></div>
+
+<!-- Navigatiebalk -->
+<nav>
+  <button class="nav-k actief" id="nav-spel" onclick="navigeer('spel')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+    </svg>
+    Spel
+  </button>
+  <button class="nav-k" id="nav-sessies" onclick="navigeer('sessies')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+    </svg>
+    Sessies
+  </button>
+  <button class="nav-k" id="nav-challenges" onclick="navigeer('challenges')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>
+    </svg>
+    Challenges
+  </button>
+  <button class="nav-k" id="nav-leaderboard" onclick="navigeer('leaderboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 20V10M12 20V4M6 20v-6"/>
+    </svg>
+    Leaderboard
+  </button>
+</nav>
+
+<!-- Reset-modal -->
+<div class="modal-bg" id="reset-modal" onclick="if(event.target===this)sluitModal()">
+  <div class="modal">
+    <h3>Alles wissen?</h3>
+    <p>Alle sessies en aankopen worden verwijderd. Spelers en startsaldo's blijven behouden.</p>
+    <div class="modal-btns">
+      <button class="btn btn-grijs" onclick="sluitModal()">Annuleer</button>
+      <button class="btn btn-rood" onclick="resetAlles()">Ja, wis alles</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sessie-afsluiten modal -->
+<div class="modal-bg" id="sluit-modal" onclick="if(event.target===this)sluitSluitModal()">
+  <div class="modal" style="max-height:88vh;overflow-y:auto;padding-bottom:40px;">
+    <h3 style="margin-bottom:16px;">Sessie afsluiten</h3>
+    <div id="verrekening-inhoud"></div>
+    <div class="modal-btns" style="margin-top:18px;">
+      <button class="btn btn-grijs" onclick="sluitSluitModal()">Annuleer</button>
+      <button class="btn btn-acc" onclick="bevestigSessieAfsluiten()">Bevestig &amp; Afsluiten</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════
+// SUPABASE CONFIGURATIE
+// Pas alleen deze twee regels aan als je een ander project gebruikt
+// ═══════════════════════════════════════════════════════════
+
+const SUPABASE_URL      = "https://maovcaytvgwcipmnhuwe.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hb3ZjYXl0dmd3Y2lwbW5odXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMzU2NDksImV4cCI6MjA5NzgxMTY0OX0.nbdXOpA6vc2o9bvDmgjOKhQTtLz0fJq9s17ptqqneOk";
+
+// Maak de Supabase-client aan (window.supabase komt van de CDN-scripttag)
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Bijhouden wanneer we voor het laatst zelf hebben opgeslagen.
+// Realtime-events die binnen 3 seconden na eigen opslag binnenkomen negeren we,
+// zodat we onze eigen update niet dubbel verwerken.
+let recentOpslagTijd = 0;
+
+// ═══════════════════════════════════════════════════════════
+// CONSTANTEN
+// ═══════════════════════════════════════════════════════════
+
+const STANDAARD_SPELERS = [
+  { naam: 'Tobias',  start:  52.86 },
+  { naam: 'Sebas',   start:  41.57 },
+  { naam: 'Tom',     start:  21.17 },
+  { naam: 'Dees',    start:  18.00 },
+  { naam: 'Joris',   start:   8.39 },
+  { naam: 'Ghost',   start:   0.63 },
+  { naam: 'Faye',    start:  -4.27 },
+  { naam: 'Tijn',    start: -10.00 },
+  { naam: 'Reinier', start: -13.87 },
+  { naam: 'Morris',  start: -102.43 },
+];
+
+const CHALLENGES = [
+  { prijs: 1,   naam: 'Iemand koffie laten zetten' },
+  { prijs: 1,   naam: '10 push ups' },
+  { prijs: 5,   naam: 'Iemand bier laten halen' },
+  { prijs: 5,   naam: 'Boodschappen voor eten laten doen' },
+  { prijs: 5,   naam: 'Laat iemand keuken helemaal opruimen' },
+  { prijs: 5,   naam: 'Broek uit op je hoofd 30 min' },
+  { prijs: 7.5, naam: 'Je moet koken' },
+  { prijs: 10,  naam: 'Een any' },
+  { prijs: 10,  naam: 'IJsklontjes in je onderbroek' },
+  { prijs: 10,  naam: '30 minuten je mond houden' },
+  { prijs: 25,  naam: 'Habiba challenge' },
+  { prijs: 25,  naam: 'Laat een shake maken' },
+  { prijs: 25,  naam: 'Eet een hele ui als appel' },
+  { prijs: 30,  naam: 'Mystery sandwich met drie ingrediënten' },
+  { prijs: 35,  naam: '24 uur WhatsApp-profielfoto laten veranderen' },
+  { prijs: 40,  naam: 'Any time rondje Elswout' },
+  { prijs: 40,  naam: 'Zet je telefoon in het Chinees voor een week' },
+  { prijs: 50,  naam: 'Outfit uitzoeken voor speciale gelegenheid' },
+  { prijs: 50,  naam: 'Random huis aanbellen voor een wc-rol' },
+  { prijs: 75,  naam: 'Spring in de sloot' },
+  { prijs: 75,  naam: 'Fortnite win in story' },
+  { prijs: 100, naam: 'Atje kratje' },
+  { prijs: 150, naam: 'FPL TikTok posten openbaar' },
+];
+
+// ═══════════════════════════════════════════════════════════
+// DATAMODEL v4
+// spelers: [{ id, naam, start }]
+// sessies: [{ id, naam, datum, status, deelnemers[], inkopen[], uitcashes[], challengeAankopen[], aanpassing }]
+// ═══════════════════════════════════════════════════════════
+
+let data = { spelers: [], sessies: [] };
+
+// ═══════════════════════════════════════════════════════════
+// OPSLAG — Supabase vervangt localStorage
+// saveData() en loadData() zijn de ENIGE plekken die de database raken.
+// ═══════════════════════════════════════════════════════════
+
+// Zet een sessie-object (camelCase JS) om naar database-formaat (snake_case)
+function sessieNaarDB(s) {
+  return {
+    id:                 s.id,
+    naam:               s.naam,
+    datum:              s.datum,
+    status:             s.status,
+    deelnemers:         s.deelnemers,
+    inkopen:            s.inkopen,
+    uitcashes:          s.uitcashes,
+    challenge_aankopen: s.challengeAankopen,
+    aanpassing:         s.aanpassing ?? null
+  };
+}
+
+// Zet een database-rij om naar het JS-formaat dat de app gebruikt
+function sessieVanDB(row) {
+  return {
+    id:                 row.id,
+    naam:               row.naam,
+    datum:              row.datum,
+    status:             row.status,
+    deelnemers:         row.deelnemers         || [],
+    inkopen:            row.inkopen             || [],
+    uitcashes:          row.uitcashes           || [],
+    challengeAankopen:  row.challenge_aankopen  || [],
+    aanpassing:         row.aanpassing          ?? null
+  };
+}
+
+// saveData: sla de huidige staat op naar Supabase (vuur-en-vergeet).
+// De UI wordt optimistisch bijgewerkt; het opslaan loopt op de achtergrond.
+function saveData() {
+  recentOpslagTijd = Date.now();
+  _slaDataNaarSupabase().catch(err => {
+    console.error('Opslaan mislukt:', err);
+    toonFout('Opslaan mislukt — controleer je verbinding.');
+  });
+}
+
+async function _slaDataNaarSupabase() {
+  // Spelers upserten (id = primaire sleutel, conflict → update)
+  if (data.spelers.length) {
+    const { error } = await sb.from('spelers')
+      .upsert(data.spelers.map(s => ({ id: s.id, naam: s.naam, start: s.start })),
+              { onConflict: 'id' });
+    if (error) throw error;
+  }
+
+  // Sessies upserten
+  if (data.sessies.length) {
+    const { error } = await sb.from('sessies')
+      .upsert(data.sessies.map(sessieNaarDB), { onConflict: 'id' });
+    if (error) throw error;
+  }
+}
+
+// loadData: haal alles op uit Supabase.
+// Als Supabase leeg is, migreer dan van localStorage (eenmalig).
+async function loadData() {
+  toonLaadIndicator(true);
+  try {
+    const [{ data: spRaw, error: spErr }, { data: sesRaw, error: sesErr }] = await Promise.all([
+      sb.from('spelers').select('*'),
+      sb.from('sessies').select('*').order('datum', { ascending: false })
+    ]);
+
+    if (spErr) throw spErr;
+    if (sesErr) throw sesErr;
+
+    if (spRaw && spRaw.length > 0) {
+      // Supabase heeft data — gebruik die
+      data.spelers = spRaw;
+      data.sessies = (sesRaw || []).map(sessieVanDB);
+    } else {
+      // Supabase is leeg — migreer van localStorage of maak standaard aan
+      const v4raw = localStorage.getItem('pokersaldo_v4');
+      const v3raw = localStorage.getItem('pokersaldo_v3');
+      if (v4raw)      { data = JSON.parse(v4raw); }
+      else if (v3raw) { migreerV3(JSON.parse(v3raw)); }
+      else            { maakStandaard(); }
+
+      // Zorg voor standaardspelers en sla éénmalig op naar Supabase
+      STANDAARD_SPELERS.forEach(sp => {
+        if (!data.spelers.some(s => s.naam === sp.naam))
+          data.spelers.push({ id: uid(), naam: sp.naam, start: sp.start });
+      });
+      await _slaDataNaarSupabase();
+    }
+
+    // Garantie: standaardspelers zijn altijd aanwezig
+    let nieuw = false;
+    STANDAARD_SPELERS.forEach(sp => {
+      if (!data.spelers.some(s => s.naam === sp.naam)) {
+        data.spelers.push({ id: uid(), naam: sp.naam, start: sp.start });
+        nieuw = true;
+      }
+    });
+    if (nieuw) await _slaDataNaarSupabase();
+
+  } catch(e) {
+    console.error('Laden mislukt:', e);
+    toonFout('Kan data niet laden — controleer je verbinding.');
+    // Noodoplossing: probeer localStorage als fallback
+    try {
+      const v4raw = localStorage.getItem('pokersaldo_v4');
+      if (v4raw) data = JSON.parse(v4raw);
+      else maakStandaard();
+    } catch { maakStandaard(); }
+  } finally {
+    toonLaadIndicator(false);
+  }
+}
+
+// ─ Laad-indicator en fout-meldingen ─────────────────────────
+
+function toonLaadIndicator(aan) {
+  document.getElementById('laad-overlay').style.display = aan ? 'flex' : 'none';
+}
+
+function toonFout(bericht) {
+  const el = document.getElementById('fout-toast');
+  el.textContent = bericht;
+  el.style.display = 'block';
+  // Toast verdwijnt na 6 seconden vanzelf
+  setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
+
+// ─ Realtime: luister naar wijzigingen van andere gebruikers ──
+
+function setupRealtime() {
+  sb.channel('pokersaldo-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'spelers' }, herlaadVanRealtime)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sessies' }, herlaadVanRealtime)
+    .subscribe();
+}
+
+function herlaadVanRealtime() {
+  // Als dit event het gevolg is van onze eigen recente opslag: negeer het.
+  // Zo voorkomen we dat we onze eigen optimistische update overschrijven.
+  if (Date.now() - recentOpslagTijd < 3000) return;
+  // Anders: een andere gebruiker heeft data gewijzigd — herlaad alles
+  loadData().then(() => renderAlles());
+}
+
+function migreerV3(v3) {
+  data.spelers = (v3.spelers || []);
+  data.sessies = [];
+  const hebData = (v3.inkopen?.length || v3.uitcashes?.length || v3.challengeAankopen?.length);
+  if (hebData) {
+    const ids = [...new Set([
+      ...(v3.inkopen || []).map(i => i.spelerId),
+      ...(v3.uitcashes || []).map(u => u.spelerId),
+      ...(v3.challengeAankopen || []).map(c => c.koperId),
+      ...(v3.challengeAankopen || []).map(c => c.ontvangerId),
+    ])].filter(id => data.spelers.some(s => s.id === id));
+
+    data.sessies.push({
+      id: uid(),
+      naam: 'Herstelde sessie',
+      datum: new Date().toISOString(),
+      status: 'actief',
+      deelnemers: ids,
+      inkopen: v3.inkopen || [],
+      uitcashes: v3.uitcashes || [],
+      challengeAankopen: v3.challengeAankopen || [],
+      aanpassing: v3.aanpassing || null
+    });
+  }
+}
+
+function maakStandaard() {
+  data = {
+    spelers: STANDAARD_SPELERS.map(s => ({ id: uid(), naam: s.naam, start: s.start })),
+    sessies: []
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// HULPFUNCTIES
+// ═══════════════════════════════════════════════════════════
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+
+function eur(n) {
+  return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(n);
+}
+
+function parseer(s) { return parseFloat(String(s).replace(',', '.')); }
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function saldoKls(s) { return s > 0.005 ? 'pos' : s < -0.005 ? 'neg' : 'nul'; }
+function saldoStr(s) { return (s > 0.005 ? '+' : '') + eur(s); }
+
+function datumStr(iso) {
+  return new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function datumLang() {
+  return new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// Netto resultaat voor een speler binnen één sessie
+function berekenSessieResult(sessie, sp) {
+  const inkoop         = sessie.inkopen.filter(i => i.spelerId === sp.id).reduce((s,i) => s + i.bedrag, 0);
+  const uitEntry       = sessie.uitcashes.find(u => u.spelerId === sp.id);
+  const uitcash        = uitEntry ? uitEntry.bedrag : 0;
+  const challGekocht   = sessie.challengeAankopen.filter(c => c.koperId     === sp.id).reduce((s,c) => s + c.prijs, 0);
+  const challOntvangen = sessie.challengeAankopen.filter(c => c.ontvangerId === sp.id).reduce((s,c) => s + c.prijs, 0);
+  return uitcash - inkoop - challGekocht + challOntvangen;
+}
+
+// Cumulatief saldo: startsaldo + alle sessieresultaten
+function berekenSaldo(sp) {
+  return data.sessies.reduce((tot, sessie) => {
+    if (!sessie.deelnemers.includes(sp.id)) return tot;
+    return tot + berekenSessieResult(sessie, sp);
+  }, sp.start);
+}
+
+// Minimale betalingen om sessie te verrekenen (greedy debtor-creditor)
+function berekenVerrekening(sessie) {
+  const spelers = data.spelers.filter(sp => sessie.deelnemers.includes(sp.id));
+  const schulden = [], winnaars = [];
+  spelers.forEach(sp => {
+    const r = berekenSessieResult(sessie, sp);
+    if (r < -0.005) schulden.push({ naam: sp.naam, bedrag: Math.abs(r) });
+    else if (r > 0.005) winnaars.push({ naam: sp.naam, bedrag: r });
+  });
+  schulden.sort((a,b) => b.bedrag - a.bedrag);
+  winnaars.sort((a,b) => b.bedrag - a.bedrag);
+
+  const txs = [];
+  const s = schulden.map(x => ({...x}));
+  const w = winnaars.map(x => ({...x}));
+  let si = 0, wi = 0;
+  while (si < s.length && wi < w.length) {
+    const b = Math.min(s[si].bedrag, w[wi].bedrag);
+    if (b > 0.005) txs.push({ van: s[si].naam, naar: w[wi].naam, bedrag: Math.round(b * 100) / 100 });
+    s[si].bedrag -= b; w[wi].bedrag -= b;
+    if (s[si].bedrag < 0.005) si++;
+    if (w[wi].bedrag < 0.005) wi++;
+  }
+  return txs;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SESSIE MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+
+function activeSessie() {
+  return data.sessies.find(s => s.status === 'actief') || null;
+}
+
+let spelTab        = 'inkopen';
+let toonNieuwForm  = false;
+
+function toonNieuwSessieForm() {
+  toonNieuwForm = true;
+  renderSpel();
+}
+
+function annuleerNieuweSessie() {
+  toonNieuwForm = false;
+  renderSpel();
+}
+
+function voegSpelerToeAanForm() {
+  const el   = document.getElementById('inp-nieuw-sp');
+  const naam = el.value.trim();
+  if (!naam) { el.focus(); return; }
+  if (data.spelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) { el.select(); return; }
+
+  const sp = { id: uid(), naam, start: 0 };
+  data.spelers.push(sp);
+  saveData();
+
+  const lbl = document.createElement('label');
+  lbl.className = 'deeln-label';
+  lbl.innerHTML = `<input type="checkbox" class="deeln-chk" value="${sp.id}" checked><span>${esc(naam)}</span>`;
+  document.getElementById('deeln-grid').appendChild(lbl);
+
+  el.value = '';
+  el.focus();
+}
+
+function startSessie() {
+  const naamEl = document.getElementById('inp-sessie-naam');
+  const naam   = naamEl?.value.trim() || datumLang();
+  const ids    = [...document.querySelectorAll('.deeln-chk:checked')].map(c => c.value);
+  if (!ids.length) return;
+
+  data.sessies.unshift({
+    id: uid(), naam, datum: new Date().toISOString(),
+    status: 'actief', deelnemers: ids,
+    inkopen: [], uitcashes: [], challengeAankopen: [], aanpassing: null
+  });
+  saveData();
+  toonNieuwForm = false;
+  spelTab = 'inkopen';
+  renderAlles();
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGINA 1 — SPEL
+// ═══════════════════════════════════════════════════════════
+
+function wisselTab(tab) {
+  spelTab = tab;
+  document.querySelectorAll('.spel-tab').forEach(t => t.classList.remove('actief'));
+  document.querySelectorAll('.spel-sectie').forEach(s => s.classList.remove('actief'));
+  document.getElementById('tab-' + tab)?.classList.add('actief');
+  document.getElementById('s-' + tab)?.classList.add('actief');
+}
+
+function renderSpel() {
+  const el     = document.getElementById('spel-inhoud');
+  const sessie = activeSessie();
+
+  if (toonNieuwForm) {
+    el.innerHTML = renderNieuwSessieFormHTML();
+  } else if (sessie) {
+    el.innerHTML = renderActiveSessieHTML(sessie);
+    wisselTab(spelTab);
+    renderInkopen();
+    renderUitcashen();
+  } else {
+    el.innerHTML = renderGeenSessieHTML();
+  }
+}
+
+function renderGeenSessieHTML() {
+  const recent = data.sessies.find(s => s.status === 'verrekend');
+  let recentHTML = '';
+  if (recent) {
+    const deeln = data.spelers.filter(sp => recent.deelnemers.includes(sp.id));
+    const top   = deeln
+      .map(sp => ({ sp, r: berekenSessieResult(recent, sp) }))
+      .sort((a,b) => b.r - a.r).slice(0, 4)
+      .map(({sp, r}) => `<span class="${saldoKls(r)}">${esc(sp.naam)} ${saldoStr(r)}</span>`)
+      .join('<span style="color:var(--rand)"> · </span>');
+    recentHTML = `
+      <div class="k" style="margin-top:16px;">
+        <div class="k-titel">Laatste sessie — ${esc(recent.naam)}</div>
+        <div style="font-size:13px;line-height:2;">${top}</div>
+      </div>`;
+  }
+  return `
+    <div style="padding:40px 0 20px;text-align:center;">
+      <div style="font-size:17px;font-weight:700;margin-bottom:6px;">Geen actieve sessie</div>
+      <div style="font-size:14px;color:var(--zacht);margin-bottom:22px;">Start een nieuwe avond</div>
+      <button class="btn btn-acc" style="padding:14px 28px;font-size:16px;" onclick="toonNieuwSessieForm()">
+        + Nieuwe sessie
+      </button>
+    </div>
+    ${recentHTML}`;
+}
+
+function renderNieuwSessieFormHTML() {
+  const spelersHTML = data.spelers
+    .map(sp => `
+      <label class="deeln-label">
+        <input type="checkbox" class="deeln-chk" value="${sp.id}" checked>
+        <span>${esc(sp.naam)}</span>
+      </label>`)
+    .join('');
+  return `
+    <div class="k">
+      <div class="k-titel">Nieuwe sessie</div>
+      <input type="text" class="veld" id="inp-sessie-naam" value="${esc(datumLang())}"
+             placeholder="Sessienaam" style="margin-bottom:14px;">
+      <div class="sub-lbl">Deelnemers</div>
+      <div class="deeln-grid" id="deeln-grid">${spelersHTML}</div>
+      <div class="rij">
+        <input type="text" class="veld" id="inp-nieuw-sp" placeholder="Nieuwe speler toevoegen..."
+               onkeydown="if(event.key==='Enter')voegSpelerToeAanForm()">
+        <button class="btn btn-grijs" onclick="voegSpelerToeAanForm()">+</button>
+      </div>
+    </div>
+    <div class="rij" style="margin-top:0;">
+      <button class="btn btn-grijs" onclick="annuleerNieuweSessie()" style="flex:1;">Annuleer</button>
+      <button class="btn btn-acc"   onclick="startSessie()"          style="flex:2;">Sessie starten</button>
+    </div>`;
+}
+
+function renderActiveSessieHTML(sessie) {
+  const namen = data.spelers
+    .filter(sp => sessie.deelnemers.includes(sp.id))
+    .map(sp => esc(sp.naam)).join(', ');
+  return `
+    <div class="sessie-hdr">
+      <div>
+        <div class="sessie-naam">${esc(sessie.naam)}</div>
+        <div class="sessie-meta">${sessie.deelnemers.length} deelnemers: ${namen}</div>
+      </div>
+      <button class="btn btn-rood" style="padding:7px 12px;font-size:13px;flex-shrink:0;"
+              onclick="toonSluitSessieModal()">Afsluiten</button>
+    </div>
+    <div class="spel-tabs">
+      <button class="spel-tab actief" id="tab-inkopen"   onclick="wisselTab('inkopen')">Inkopen</button>
+      <button class="spel-tab"        id="tab-uitcashen" onclick="wisselTab('uitcashen')">Uitcashen</button>
+    </div>
+    <div class="spel-sectie actief" id="s-inkopen">
+      <div id="ink-lijst"></div>
+      <div id="pot-balk"></div>
+    </div>
+    <div class="spel-sectie" id="s-uitcashen">
+      <div id="pot-mel"></div>
+      <div class="k"><div id="uit-lijst"></div></div>
+    </div>`;
+}
+
+// ── Inkopen ─────────────────────────────────────────────────
+
+function voegInkoopToe(spId, bedrag) {
+  const sessie = activeSessie();
+  if (!sessie) return;
+  if (bedrag === undefined) {
+    const el = document.getElementById('inkoop-' + spId);
+    bedrag   = parseer(el.value);
+    if (isNaN(bedrag) || bedrag <= 0) { el?.focus(); return; }
+    el.value = '';
+  }
+  sessie.inkopen.push({ id: uid(), spelerId: spId, bedrag: Math.round(bedrag * 100) / 100 });
+  saveData();
+  renderInkopen();
+  document.getElementById('inkoop-' + spId)?.focus();
+}
+
+function verwijderInkoop(inId) {
+  const sessie = activeSessie();
+  if (!sessie) return;
+  sessie.inkopen = sessie.inkopen.filter(i => i.id !== inId);
+  saveData();
+  renderInkopen();
+}
+
+function renderInkopen() {
+  const lijstEl = document.getElementById('ink-lijst');
+  const potEl   = document.getElementById('pot-balk');
+  if (!lijstEl) return;
+
+  const sessie = activeSessie();
+  if (!sessie) { lijstEl.innerHTML = ''; potEl.innerHTML = ''; return; }
+
+  const deeln = data.spelers.filter(sp => sessie.deelnemers.includes(sp.id));
+  const SNEL  = [5, 10, 20];
+
+  lijstEl.innerHTML = deeln.map(sp => {
+    const mijnIn    = sessie.inkopen.filter(i => i.spelerId === sp.id);
+    const totInkoop = mijnIn.reduce((s, i) => s + i.bedrag, 0);
+    const chips     = mijnIn.map(i => `
+      <span class="ink-chip">
+        ${eur(i.bedrag)}
+        <button class="x-btn" onclick="verwijderInkoop('${i.id}')" title="Verwijder">&#10005;</button>
+      </span>`).join('');
+    return `
+      <div class="ink-kaart">
+        <div class="ink-kop">
+          <span class="ink-naam">${esc(sp.naam)}</span>
+          <span class="ink-totaal ${totInkoop > 0 ? '' : 'nul'}">${eur(totInkoop)}</span>
+        </div>
+        <div class="snelknop-rij">
+          ${SNEL.map(b => `<button class="snelknop" onclick="voegInkoopToe('${sp.id}',${b})">€${b}</button>`).join('')}
+          <div class="ink-eigen">
+            <div class="eur-wrap">
+              <input type="text" inputmode="decimal" class="veld" id="inkoop-${sp.id}"
+                     placeholder="Eigen bedrag"
+                     onkeydown="if(event.key==='Enter')voegInkoopToe('${sp.id}')">
+            </div>
+            <button class="btn btn-acc" style="padding:10px 14px;font-size:16px;"
+                    onclick="voegInkoopToe('${sp.id}')">+</button>
+          </div>
+        </div>
+        ${mijnIn.length ? `<div class="ink-items">${chips}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const totPot = sessie.inkopen.reduce((s, i) => s + i.bedrag, 0);
+  potEl.innerHTML = totPot > 0 ? `
+    <div class="pot-balk">
+      <span style="font-size:13px;font-weight:500;color:var(--zacht);">Totale pot</span>
+      <span style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;">${eur(totPot)}</span>
+    </div>` : '';
+}
+
+// ── Uitcashen ───────────────────────────────────────────────
+
+function slaUitcashOp(spId) {
+  const sessie = activeSessie();
+  if (!sessie) return;
+  const el  = document.getElementById('uit-' + spId);
+  const val = el.value.trim();
+
+  if (val === '') {
+    sessie.uitcashes = sessie.uitcashes.filter(u => u.spelerId !== spId);
+  } else {
+    const b = parseer(val);
+    if (isNaN(b) || b < 0) return;
+    const bedrag = Math.round(b * 100) / 100;
+    const idx    = sessie.uitcashes.findIndex(u => u.spelerId === spId);
+    if (idx >= 0) sessie.uitcashes[idx].bedrag = bedrag;
+    else          sessie.uitcashes.push({ spelerId: spId, bedrag });
+  }
+
+  controleerPot(sessie);
+  saveData();
+  renderUitcashen();
+}
+
+function controleerPot(sessie) {
+  sessie.aanpassing = null;
+  const actief = data.spelers.filter(sp =>
+    sessie.deelnemers.includes(sp.id) && sessie.inkopen.some(i => i.spelerId === sp.id)
+  );
+  if (!actief.length) return;
+  if (!actief.every(sp => sessie.uitcashes.some(u => u.spelerId === sp.id))) return;
+
+  const totIn  = sessie.inkopen.filter(i => actief.some(s => s.id === i.spelerId)).reduce((s,i) => s + i.bedrag, 0);
+  const totUit = sessie.uitcashes.filter(u => actief.some(s => s.id === u.spelerId)).reduce((s,u) => s + u.bedrag, 0);
+  const verschil = totUit - totIn;
+  if (Math.abs(verschil) < 0.005) return;
+
+  if (Math.abs(verschil) < 2) {
+    const correctie = verschil / actief.length;
+    actief.forEach(sp => {
+      const idx = sessie.uitcashes.findIndex(u => u.spelerId === sp.id);
+      if (idx >= 0) sessie.uitcashes[idx].bedrag = Math.round((sessie.uitcashes[idx].bedrag - correctie) * 100) / 100;
+    });
+    sessie.aanpassing = verschil;
+  }
+}
+
+function renderUitcashen() {
+  const lijstEl = document.getElementById('uit-lijst');
+  const melEl   = document.getElementById('pot-mel');
+  if (!lijstEl) return;
+
+  const sessie = activeSessie();
+  if (!sessie) { lijstEl.innerHTML = ''; melEl.innerHTML = ''; return; }
+
+  const actief = data.spelers.filter(sp =>
+    sessie.deelnemers.includes(sp.id) && sessie.inkopen.some(i => i.spelerId === sp.id)
+  );
+
+  let melHTML = '';
+  if (sessie.aanpassing !== null && Math.abs(sessie.aanpassing) >= 0.005) {
+    melHTML = `<div class="mel mel-ok">Afrondingsverschil van ${eur(Math.abs(sessie.aanpassing))} automatisch verdeeld.</div>`;
+  } else if (actief.length && actief.every(sp => sessie.uitcashes.some(u => u.spelerId === sp.id))) {
+    const totIn  = sessie.inkopen.filter(i => actief.some(s => s.id === i.spelerId)).reduce((s,i) => s + i.bedrag, 0);
+    const totUit = sessie.uitcashes.filter(u => actief.some(s => s.id === u.spelerId)).reduce((s,u) => s + u.bedrag, 0);
+    const v = totUit - totIn;
+    if (totIn > 0) {
+      melHTML = Math.abs(v) >= 2
+        ? `<div class="mel mel-warn">&#9888; Pot klopt niet! Verschil: <strong>${eur(Math.abs(v))}</strong></div>`
+        : `<div class="mel mel-ok">&#10003; Pot klopt — klaar om af te sluiten!</div>`;
+    }
+  }
+  melEl.innerHTML = melHTML;
+
+  const deeln = data.spelers.filter(sp => sessie.deelnemers.includes(sp.id));
+  lijstEl.innerHTML = deeln.map(sp => {
+    const mijnIn    = sessie.inkopen.filter(i => i.spelerId === sp.id);
+    const totInkoop = mijnIn.reduce((s, i) => s + i.bedrag, 0);
+    const uitEntry  = sessie.uitcashes.find(u => u.spelerId === sp.id);
+    const netto     = uitEntry !== undefined ? uitEntry.bedrag - totInkoop : null;
+    return `
+      <div class="uit-kaart">
+        <div class="uit-kop">
+          <div>
+            <div class="uit-naam">${esc(sp.naam)}</div>
+            <div class="uit-sub">inkoop: ${eur(totInkoop)}</div>
+          </div>
+          <span class="uit-netto ${netto !== null ? saldoKls(netto) : 'nul'}">
+            ${netto !== null ? saldoStr(netto) : '—'}
+          </span>
+        </div>
+        <div class="eur-wrap">
+          <input type="text" inputmode="decimal" class="veld" id="uit-${sp.id}"
+                 value="${uitEntry ? uitEntry.bedrag : ''}"
+                 placeholder="Eindstand chips"
+                 onchange="slaUitcashOp('${sp.id}')"
+                 onkeydown="if(event.key==='Enter'){slaUitcashOp('${sp.id}');this.blur();}">
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGINA 3 — CHALLENGES (aparte pagina)
+// ═══════════════════════════════════════════════════════════
+
+function updateChallDropdown() {
+  const koperId   = document.getElementById('ch-koper')?.value;
+  const sel       = document.getElementById('ch-keuze');
+  if (!sel) return;
+  const was       = sel.value;
+  sel.innerHTML   = '<option value="">Kies challenge...</option>';
+  const koper     = data.spelers.find(s => s.id === koperId);
+  const maxBudget = koper ? berekenSaldo(koper) : Infinity;
+  const prijzen   = [...new Set(CHALLENGES.map(c => c.prijs))].sort((a,b) => a - b);
+
+  prijzen.forEach(prijs => {
+    const betaalbaar = prijs <= maxBudget;
+    const groepEl    = document.createElement('optgroup');
+    groepEl.label    = eur(prijs) + (betaalbaar ? '' : ' — te duur');
+    CHALLENGES.filter(c => c.prijs === prijs).forEach(c => {
+      const val = JSON.stringify({ naam: c.naam, prijs: c.prijs });
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = c.naam; opt.disabled = !betaalbaar;
+      if (val === was) opt.selected = true;
+      groepEl.appendChild(opt);
+    });
+    sel.appendChild(groepEl);
+  });
+}
+
+function renderChallenges() {
+  const sessie    = activeSessie();
+  const koperSel  = document.getElementById('ch-koper');
+  const ontvSel   = document.getElementById('ch-ontv');
+  if (!koperSel || !ontvSel) return;
+
+  const wasKoper = koperSel.value;
+  const wasOntv  = ontvSel.value;
+
+  // Spelers om uit te kiezen: deelnemers van actieve sessie, anders alle spelers
+  const pool = sessie
+    ? data.spelers.filter(sp => sessie.deelnemers.includes(sp.id))
+    : data.spelers;
+
+  koperSel.innerHTML = '<option value="">Wie koopt?</option>';
+  ontvSel.innerHTML  = '<option value="">Voor wie?</option>';
+
+  pool.forEach(sp => {
+    const s = berekenSaldo(sp);
+    if (s > 0.005)
+      koperSel.innerHTML += `<option value="${sp.id}"${sp.id === wasKoper ? ' selected' : ''}>${esc(sp.naam)} (${saldoStr(s)})</option>`;
+    ontvSel.innerHTML += `<option value="${sp.id}"${sp.id === wasOntv ? ' selected' : ''}>${esc(sp.naam)}</option>`;
+  });
+
+  updateChallDropdown();
+
+  // Catalogus
+  const catEl   = document.getElementById('ch-catalogus');
+  const prijzen = [...new Set(CHALLENGES.map(c => c.prijs))].sort((a,b) => a - b);
+  catEl.innerHTML = prijzen.map(prijs => {
+    const items = CHALLENGES.filter(c => c.prijs === prijs)
+      .map(c => `<div class="chal-item">${esc(c.naam)}</div>`).join('');
+    return `<div class="tier-hdr"><span class="tier-prijs">${eur(prijs)}</span><span class="tier-lijn"></span></div>${items}`;
+  }).join('');
+
+  // Historie: alle challenges uit alle sessies (nieuwste eerst)
+  const histEl  = document.getElementById('ch-historie');
+  const alleAankopen = data.sessies.flatMap(s => s.challengeAankopen.map(c => ({ ...c, sessieNaam: s.naam })));
+  if (!alleAankopen.length) {
+    histEl.innerHTML = '<div class="leeg" style="padding:12px 0;">Nog geen challenges gekocht.</div>';
+    return;
+  }
+  histEl.innerHTML = alleAankopen.map(c => {
+    const kNaam = esc(data.spelers.find(s => s.id === c.koperId)?.naam    ?? '(verwijderd)');
+    const oNaam = esc(data.spelers.find(s => s.id === c.ontvangerId)?.naam ?? '(verwijderd)');
+    return `
+      <div class="hist-rij">
+        <div style="flex:1;">
+          <strong>${kNaam}</strong> kocht
+          <span style="color:var(--acc);">'${esc(c.challNaam)}'</span>
+          voor <strong>${oNaam}</strong>
+          <span style="display:block;font-size:12px;color:var(--zacht);margin-top:2px;">
+            ${c.tijd} &middot; ${eur(c.prijs)} &middot; ${esc(c.sessieNaam)}
+          </span>
+        </div>
+        <button class="x-btn" onclick="verwijderChallengeAankoop('${c.id}')" title="Verwijder">&#10005;</button>
+      </div>`;
+  }).join('');
+}
+
+function koopChallenge() {
+  const sessie   = activeSessie();
+  const koperId  = document.getElementById('ch-koper')?.value;
+  const ontvId   = document.getElementById('ch-ontv')?.value;
+  const challRaw = document.getElementById('ch-keuze')?.value;
+  const melEl    = document.getElementById('ch-mel');
+  melEl.innerHTML = '';
+
+  if (!koperId || !ontvId || !challRaw) {
+    melEl.innerHTML = '<div class="mel mel-err">Vul alle drie de velden in.</div>'; return;
+  }
+  if (koperId === ontvId) {
+    melEl.innerHTML = '<div class="mel mel-err">Koper en ontvanger mogen niet dezelfde persoon zijn.</div>'; return;
+  }
+  if (!sessie) {
+    melEl.innerHTML = '<div class="mel mel-err">Start eerst een sessie om challenges te kopen.</div>'; return;
+  }
+
+  const chall = JSON.parse(challRaw);
+  const koper = data.spelers.find(s => s.id === koperId);
+  const saldo = berekenSaldo(koper);
+
+  if (saldo < chall.prijs - 0.005) {
+    melEl.innerHTML = `<div class="mel mel-err">${esc(koper.naam)} heeft te weinig saldo (${eur(saldo)}).</div>`; return;
+  }
+
+  const tijd = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  sessie.challengeAankopen.unshift({ id: uid(), koperId, ontvangerId: ontvId, challNaam: chall.naam, prijs: chall.prijs, tijd });
+  saveData();
+  renderChallenges();
+  renderLeaderboard();
+}
+
+function verwijderChallengeAankoop(id) {
+  data.sessies.forEach(s => { s.challengeAankopen = s.challengeAankopen.filter(c => c.id !== id); });
+  saveData();
+  renderChallenges();
+  renderLeaderboard();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SESSIE AFSLUITEN
+// ═══════════════════════════════════════════════════════════
+
+function toonSluitSessieModal() {
+  const sessie = activeSessie();
+  if (!sessie) return;
+
+  const deeln      = data.spelers.filter(sp => sessie.deelnemers.includes(sp.id));
+  const resultaten = deeln.map(sp => ({ sp, r: berekenSessieResult(sessie, sp) })).sort((a,b) => b.r - a.r);
+
+  const actief = deeln.filter(sp => sessie.inkopen.some(i => i.spelerId === sp.id));
+  const potKlopt = !actief.length || actief.every(sp => sessie.uitcashes.some(u => u.spelerId === sp.id));
+
+  const resHTML = resultaten.map(({ sp, r }) => `
+    <div class="verr-rij">
+      <span>${esc(sp.naam)}</span>
+      <span class="${saldoKls(r)}" style="font-weight:700;">${saldoStr(r)}</span>
+    </div>`).join('');
+
+  const txs = berekenVerrekening(sessie);
+  const verrHTML = txs.length
+    ? txs.map(tx => `
+        <div class="betaal-rij">
+          <span style="font-weight:600;">${esc(tx.van)}</span>
+          <span class="betaal-pijl">&#8594;</span>
+          <span style="font-weight:600;">${esc(tx.naar)}</span>
+          <span style="margin-left:auto;font-weight:700;color:var(--acc);">${eur(tx.bedrag)}</span>
+        </div>`).join('')
+    : `<div class="mel mel-ok" style="margin-top:6px;">Niemand hoeft te verrekenen.</div>`;
+
+  const waarschHTML = !potKlopt && actief.length
+    ? `<div class="mel mel-warn" style="margin-bottom:14px;">&#9888; Niet alle spelers hebben uitgecast.</div>`
+    : '';
+
+  document.getElementById('verrekening-inhoud').innerHTML = `
+    ${waarschHTML}
+    <div class="sub-lbl">Resultaten deze sessie</div>
+    ${resHTML}
+    <div class="sub-lbl" style="margin-top:16px;">Verrekeningen</div>
+    ${verrHTML}`;
+
+  document.getElementById('sluit-modal').classList.add('aan');
+}
+
+function sluitSluitModal() {
+  document.getElementById('sluit-modal').classList.remove('aan');
+}
+
+function bevestigSessieAfsluiten() {
+  const sessie = activeSessie();
+  if (!sessie) return;
+  sessie.status = 'verrekend';
+  saveData();
+  sluitSluitModal();
+  spelTab = 'inkopen';
+  renderAlles();
+  navigeer('sessies');
+}
+
+function verwijderSessie(sessieId) {
+  if (!confirm('Deze sessie verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  data.sessies = data.sessies.filter(s => s.id !== sessieId);
+  // Markeer als eigen operatie zodat het terugkomende realtime-event genegeerd wordt
+  recentOpslagTijd = Date.now();
+  // Verwijder expliciet in de database (saveData doet alleen upserts, geen deletes)
+  sb.from('sessies').delete().eq('id', sessieId)
+    .then(({ error }) => { if (error) toonFout('Verwijderen mislukt.'); });
+  renderSessies();
+  renderLeaderboard();
+  if (!activeSessie()) renderSpel();
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGINA 2 — SESSIES
+// ═══════════════════════════════════════════════════════════
+
+function renderSessies() {
+  const el = document.getElementById('sessies-inhoud');
+  if (!data.sessies.length) {
+    el.innerHTML = '<div class="leeg">Nog geen sessies gespeeld.</div>';
+    return;
+  }
+
+  el.innerHTML = data.sessies.map(sessie => {
+    const deeln = data.spelers.filter(sp => sessie.deelnemers.includes(sp.id));
+    const resultaten = deeln.map(sp => ({ sp, r: berekenSessieResult(sessie, sp) })).sort((a,b) => b.r - a.r);
+
+    const resHTML = resultaten.map(({ sp, r }) => `
+      <div class="verr-rij" style="font-size:14px;">
+        <span>${esc(sp.naam)}</span>
+        <span class="${saldoKls(r)}">${saldoStr(r)}</span>
+      </div>`).join('');
+
+    const txs = berekenVerrekening(sessie);
+    const verrHTML = sessie.status === 'verrekend' && txs.length ? `
+      <div class="sub-lbl" style="margin-top:12px;">Verrekeningen</div>
+      ${txs.map(tx => `
+        <div class="betaal-rij" style="font-size:13px;">
+          <span>${esc(tx.van)}</span>
+          <span class="betaal-pijl">&#8594;</span>
+          <span>${esc(tx.naar)}</span>
+          <span style="margin-left:auto;font-weight:700;">${eur(tx.bedrag)}</span>
+        </div>`).join('')}` : '';
+
+    const badge = sessie.status === 'actief'
+      ? '<span class="badge badge-actief">Actief</span>'
+      : '<span class="badge badge-klaar">Verrekend</span>';
+
+    return `
+      <div class="sessie-kaart">
+        <div class="sessie-kaart-kop" style="margin-bottom:10px;">
+          <div>
+            <div class="sessie-kaart-naam">${esc(sessie.naam)}</div>
+            <div style="font-size:12px;color:var(--zacht);margin-top:2px;">
+              ${datumStr(sessie.datum)} &middot; ${deeln.length} spelers
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${badge}
+            <button class="x-btn" onclick="verwijderSessie('${sessie.id}')" title="Verwijder sessie"
+                    style="font-size:16px;color:var(--zacht);">&#128465;</button>
+          </div>
+        </div>
+        ${resHTML}
+        ${verrHTML}
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGINA 3 — LEADERBOARD
+// ═══════════════════════════════════════════════════════════
+
+function renderLeaderboard() {
+  const el = document.getElementById('lb-inhoud');
+  if (!data.spelers.length) { el.innerHTML = '<div class="leeg">Nog geen spelers.</div>'; return; }
+
+  const gesorteerd = data.spelers
+    .map(sp => ({ ...sp, saldo: berekenSaldo(sp) }))
+    .sort((a, b) => b.saldo - a.saldo);
+
+  el.innerHTML = gesorteerd.map((sp, i) => {
+    const posEl = i === 0
+      ? `<div class="lb-pos goud">&#9733;</div>`
+      : `<div class="lb-pos">${i + 1}</div>`;
+    return `
+      <div class="lb-rij">
+        ${posEl}
+        <span class="lb-naam">${esc(sp.naam)}</span>
+        <span class="lb-bedrag ${saldoKls(sp.saldo)}">${saldoStr(sp.saldo)}</span>
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATIE & RESET
+// ═══════════════════════════════════════════════════════════
+
+function navigeer(pagina) {
+  document.querySelectorAll('.pagina').forEach(p => p.classList.remove('actief'));
+  document.querySelectorAll('.nav-k').forEach(k => k.classList.remove('actief'));
+  document.getElementById('p-' + pagina).classList.add('actief');
+  document.getElementById('nav-' + pagina).classList.add('actief');
+  if (pagina === 'spel')        renderSpel();
+  if (pagina === 'sessies')     renderSessies();
+  if (pagina === 'challenges')  renderChallenges();
+  if (pagina === 'leaderboard') renderLeaderboard();
+}
+
+function vraagReset()  { document.getElementById('reset-modal').classList.add('aan'); }
+function sluitModal()  { document.getElementById('reset-modal').classList.remove('aan'); }
+
+function resetAlles() {
+  maakStandaard();
+  sluitModal();
+  spelTab = 'inkopen';
+  toonNieuwForm = false;
+  navigeer('spel');
+  // Verwijder alle sessies uit de database, sla dan de nieuwe standaard op
+  recentOpslagTijd = Date.now();
+  sb.from('sessies').delete().neq('id', '')
+    .then(() => saveData())
+    .catch(() => toonFout('Reset mislukt — probeer opnieuw.'));
+}
+
+// ═══════════════════════════════════════════════════════════
+// INITIALISATIE
+// ═══════════════════════════════════════════════════════════
+
+function renderAlles() {
+  renderSpel();
+  const actief = document.querySelector('.pagina.actief')?.id;
+  if (actief === 'p-sessies')     renderSessies();
+  if (actief === 'p-challenges')  renderChallenges();
+  if (actief === 'p-leaderboard') renderLeaderboard();
+}
+
+// Async opstarten: eerst data ophalen, dan renderen, dan realtime aanzetten
+(async () => {
+  await loadData();
+  renderAlles();
+  setupRealtime();
+})();
+</script>
+</body>
+</html>

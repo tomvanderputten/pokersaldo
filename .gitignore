@@ -1,0 +1,14 @@
+# macOS systeembestanden
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V8
+.Trashes
+
+# Node (voor het geval je ooit npm aanraakt)
+node_modules/
+npm-debug.log*
+
+# Editors
+.vscode/
+.idea/
