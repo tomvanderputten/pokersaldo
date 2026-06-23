@@ -957,6 +957,30 @@ function activeSessie() {
   return data.sessies.find(s => s.status === 'actief') || null;
 }
 
+// Vaste, verborgen sessie voor challenges die los (zonder actieve sessie) gekocht
+// worden. Status 'losse' → telt wél mee in berekenSaldo (via deelnemerschap),
+// maar geldt niet als actieve sessie en staat niet in de Sessies-lijst.
+const LOSSE_CHALLENGES_ID = 'losse-challenges';
+
+function getOfMaakLosseSessie() {
+  let s = data.sessies.find(x => x.id === LOSSE_CHALLENGES_ID);
+  if (!s) {
+    s = {
+      id: LOSSE_CHALLENGES_ID,
+      naam: 'Losse challenges',
+      datum: new Date().toISOString(),
+      status: 'losse',
+      deelnemers: [],
+      inkopen: [],
+      uitcashes: [],
+      challengeAankopen: [],
+      aanpassing: null
+    };
+    data.sessies.push(s);
+  }
+  return s;
+}
+
 let spelTab        = 'inkopen';
 let toonNieuwForm  = false;
 
@@ -993,7 +1017,7 @@ function startSessie() {
   const naamEl = document.getElementById('inp-sessie-naam');
   const naam   = naamEl?.value.trim() || datumLang();
   const ids    = [...document.querySelectorAll('.deeln-chk:checked')].map(c => c.value);
-  if (!ids.length) return;
+  if (!ids.length) { toonFout('Selecteer minstens één speler voor de sessie.'); return; }
 
   data.sessies.unshift({
     id: uid(), naam, datum: new Date().toISOString(),
@@ -1065,7 +1089,7 @@ function renderNieuwSessieFormHTML() {
   const spelersHTML = data.spelers
     .map(sp => `
       <label class="deeln-label">
-        <input type="checkbox" class="deeln-chk" value="${sp.id}" checked>
+        <input type="checkbox" class="deeln-chk" value="${sp.id}">
         <span>${esc(sp.naam)}</span>
       </label>`)
     .join('');
@@ -1394,9 +1418,6 @@ function koopChallenge() {
   if (koperId === ontvId) {
     melEl.innerHTML = '<div class="mel mel-err">Koper en ontvanger mogen niet dezelfde persoon zijn.</div>'; return;
   }
-  if (!sessie) {
-    melEl.innerHTML = '<div class="mel mel-err">Start eerst een sessie om challenges te kopen.</div>'; return;
-  }
 
   const chall = JSON.parse(challRaw);
   const koper = data.spelers.find(s => s.id === koperId);
@@ -1406,8 +1427,14 @@ function koopChallenge() {
     melEl.innerHTML = `<div class="mel mel-err">${esc(koper.naam)} heeft te weinig saldo (${eur(saldo)}).</div>`; return;
   }
 
+  // Met actieve sessie → daarin boeken. Anders → in de losse-challenges-sessie.
+  const doelSessie = sessie || getOfMaakLosseSessie();
+  // Zorg dat koper én ontvanger deelnemer zijn, zodat het saldo correct meetelt.
+  if (!doelSessie.deelnemers.includes(koperId)) doelSessie.deelnemers.push(koperId);
+  if (!doelSessie.deelnemers.includes(ontvId))  doelSessie.deelnemers.push(ontvId);
+
   const tijd = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-  sessie.challengeAankopen.unshift({ id: uid(), koperId, ontvangerId: ontvId, challNaam: chall.naam, prijs: chall.prijs, tijd });
+  doelSessie.challengeAankopen.unshift({ id: uid(), koperId, ontvangerId: ontvId, challNaam: chall.naam, prijs: chall.prijs, tijd });
   saveData();
   renderChallenges();
   renderLeaderboard();
@@ -1499,12 +1526,14 @@ function verwijderSessie(sessieId) {
 
 function renderSessies() {
   const el = document.getElementById('sessies-inhoud');
-  if (!data.sessies.length) {
+  // De verborgen 'losse'-sessie (voor losse challenges) niet tonen in de lijst
+  const zichtbaar = data.sessies.filter(s => s.status !== 'losse');
+  if (!zichtbaar.length) {
     el.innerHTML = '<div class="leeg">Nog geen sessies gespeeld.</div>';
     return;
   }
 
-  el.innerHTML = data.sessies.map(sessie => {
+  el.innerHTML = zichtbaar.map(sessie => {
     const deeln = data.spelers.filter(sp => sessie.deelnemers.includes(sp.id));
     const resultaten = deeln.map(sp => ({ sp, r: berekenSessieResult(sessie, sp) })).sort((a,b) => b.r - a.r);
 
