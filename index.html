@@ -628,26 +628,21 @@ function sessieVanDB(row) {
   };
 }
 
-// saveData: sla de huidige staat op naar Supabase (vuur-en-vergeet).
-// De UI wordt optimistisch bijgewerkt; het opslaan loopt op de achtergrond.
+// saveData: sla altijd op naar localStorage (direct, werkt offline),
+// én probeer Supabase voor multi-device sync (stil als het mislukt).
 function saveData() {
+  localStorage.setItem('pokersaldo_v4', JSON.stringify(data));
   recentOpslagTijd = Date.now();
-  _slaDataNaarSupabase().catch(err => {
-    console.error('Opslaan mislukt:', err);
-    toonFout('Opslaan mislukt — controleer je verbinding.');
-  });
+  _slaDataNaarSupabase().catch(err => console.warn('Supabase sync:', err?.message));
 }
 
 async function _slaDataNaarSupabase() {
-  // Spelers upserten (id = primaire sleutel, conflict → update)
   if (data.spelers.length) {
     const { error } = await sb.from('spelers')
       .upsert(data.spelers.map(s => ({ id: s.id, naam: s.naam, start: s.start })),
               { onConflict: 'id' });
     if (error) throw error;
   }
-
-  // Sessies upserten
   if (data.sessies.length) {
     const { error } = await sb.from('sessies')
       .upsert(data.sessies.map(sessieNaarDB), { onConflict: 'id' });
@@ -655,8 +650,8 @@ async function _slaDataNaarSupabase() {
   }
 }
 
-// loadData: haal alles op uit Supabase.
-// Als Supabase leeg is, migreer dan van localStorage (eenmalig).
+// loadData: probeer Supabase (meest actuele data voor multi-device),
+// val stil terug op localStorage als Supabase niet beschikbaar is.
 async function loadData() {
   toonLaadIndicator(true);
   try {
@@ -665,30 +660,31 @@ async function loadData() {
       sb.from('sessies').select('*').order('datum', { ascending: false })
     ]);
 
-    if (spErr) throw spErr;
-    if (sesErr) throw sesErr;
+    if (spErr || sesErr) throw spErr || sesErr;
 
     if (spRaw && spRaw.length > 0) {
-      // Supabase heeft data — gebruik die
+      // Supabase heeft data
       data.spelers = spRaw;
       data.sessies = (sesRaw || []).map(sessieVanDB);
+      localStorage.setItem('pokersaldo_v4', JSON.stringify(data));
     } else {
-      // Supabase is leeg — migreer van localStorage of maak standaard aan
+      // Supabase leeg of nog niet ingericht — laad uit localStorage
       const v4raw = localStorage.getItem('pokersaldo_v4');
       const v3raw = localStorage.getItem('pokersaldo_v3');
       if (v4raw)      { data = JSON.parse(v4raw); }
       else if (v3raw) { migreerV3(JSON.parse(v3raw)); }
       else            { maakStandaard(); }
 
-      // Zorg voor standaardspelers en sla éénmalig op naar Supabase
       STANDAARD_SPELERS.forEach(sp => {
         if (!data.spelers.some(s => s.naam === sp.naam))
           data.spelers.push({ id: uid(), naam: sp.naam, start: sp.start });
       });
-      await _slaDataNaarSupabase();
+      // Probeer te migreren naar Supabase; geen fout als het mislukt
+      _slaDataNaarSupabase().catch(err => console.warn('Supabase niet beschikbaar:', err?.message));
+      localStorage.setItem('pokersaldo_v4', JSON.stringify(data));
     }
 
-    // Garantie: standaardspelers zijn altijd aanwezig
+    // Standaardspelers altijd aanwezig houden
     let nieuw = false;
     STANDAARD_SPELERS.forEach(sp => {
       if (!data.spelers.some(s => s.naam === sp.naam)) {
@@ -696,12 +692,11 @@ async function loadData() {
         nieuw = true;
       }
     });
-    if (nieuw) await _slaDataNaarSupabase();
+    if (nieuw) saveData();
 
   } catch(e) {
-    console.error('Laden mislukt:', e);
-    toonFout('Supabase fout: ' + (e?.message || e?.code || JSON.stringify(e)));
-    // Noodoplossing: probeer localStorage als fallback
+    // Supabase onbereikbaar — stil terug naar localStorage
+    console.warn('Supabase niet bereikbaar, gebruik localStorage:', e?.message);
     try {
       const v4raw = localStorage.getItem('pokersaldo_v4');
       if (v4raw) data = JSON.parse(v4raw);
