@@ -529,6 +529,67 @@
     .chal-btn:hover  { color: var(--tekst); background: var(--glass-2); }
     .chal-btn:active { transform: scale(.88); }
 
+    /* ── Lightning Round (elektrische violet→blauw stijl) ── */
+    .btn-lightning {
+      background: linear-gradient(135deg, #A855F7 0%, #3B82F6 100%); color: #fff;
+      box-shadow: 0 8px 22px -6px rgba(168,85,247,.5), inset 0 1px 0 rgba(255,255,255,.25);
+    }
+    .lightning-titel {
+      font-family: var(--font-display); font-weight: 700;
+      background: linear-gradient(135deg, #C084FC, #60A5FA);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .lightning-intro { font-size: 13px; color: var(--zacht); margin-bottom: 12px; line-height: 1.5; }
+    .lightning-slider { width: 100%; accent-color: #A855F7; }
+
+    .lightning-live {
+      border-radius: 16px;
+      border: 1.5px solid rgba(168,85,247,.5);
+      background: linear-gradient(135deg, rgba(168,85,247,.14), rgba(59,130,246,.06));
+      padding: 14px;
+      box-shadow: 0 8px 28px -8px rgba(168,85,247,.45);
+    }
+    .lightning-live-kop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .lightning-timer {
+      font-family: var(--font-display); font-weight: 700; font-size: 20px;
+      font-variant-numeric: tabular-nums;
+      color: #C084FC; text-shadow: 0 0 14px rgba(168,85,247,.7);
+    }
+    .lightning-offer {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 12px; margin-bottom: 8px;
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 12px;
+    }
+    .lightning-offer:last-child { margin-bottom: 0; }
+    .lightning-offer-info { flex: 1; min-width: 0; }
+    .lightning-offer-naam { font-weight: 600; font-size: 14px; }
+    .lightning-offer-prijs { font-size: 13px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .lightning-offer-prijs s { color: var(--zacht); margin-right: 5px; }
+    .lightning-offer-prijs b { color: var(--acc); font-family: var(--font-display); }
+    .lightning-korting {
+      font-size: 12px; font-weight: 800; font-family: var(--font-display);
+      color: #fff; background: linear-gradient(135deg, #A855F7, #3B82F6);
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+      box-shadow: 0 4px 12px -3px rgba(168,85,247,.6);
+    }
+    .lightning-koop {
+      padding: 9px 13px; font-size: 13px; font-weight: 700; flex-shrink: 0;
+      border: none; border-radius: 10px; cursor: pointer;
+      background: linear-gradient(135deg, #A855F7, #3B82F6); color: #fff;
+      -webkit-tap-highlight-color: transparent; transition: transform .1s;
+    }
+    .lightning-koop:active { transform: scale(.94); }
+    .lightning-uitverkocht { text-align: center; color: var(--zacht); font-size: 14px; padding: 8px 0; }
+
+    /* Historie: via lightning gekochte challenge */
+    .hist-rij.lightning { border-color: rgba(168,85,247,.55); box-shadow: inset 0 0 0 1px rgba(168,85,247,.08); }
+    .lightning-hist-badge {
+      font-weight: 800;
+      background: linear-gradient(135deg, #C084FC, #60A5FA);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
     /* ── Settlement ── */
     .verr-rij {
       display: flex; justify-content: space-between; align-items: center;
@@ -649,6 +710,9 @@
       <div id="ch-mel"></div>
       <button class="btn btn-acc btn-vol" onclick="koopChallenge()">Registreer challenge</button>
     </div>
+    <div class="k lightning-kaart" id="lightning-kaart">
+      <div id="lightning-inhoud"></div>
+    </div>
     <div class="k">
       <div class="k-titel">Alle challenges</div>
       <div id="ch-catalogus"></div>
@@ -723,6 +787,28 @@
     <div id="speler-detail"></div>
     <div class="modal-btns" style="margin-top:18px;">
       <button class="btn btn-grijs btn-vol" onclick="sluitSpelerModal()">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightning Round instellen -->
+<div class="modal-bg" id="lightning-modal" onclick="if(event.target===this)sluitLightningModal()">
+  <div class="modal">
+    <h3 class="lightning-titel">&#9889; Lightning Round</h3>
+    <p>Zet een aantal challenges tijdelijk in de aanbieding met een willekeurige korting. Wie het eerst is, koopt 'm met korting!</p>
+    <div class="sub-lbl">Hoe lang duurt de ronde?</div>
+    <select class="veld" id="lightning-duur" style="margin-bottom:8px;">
+      <option value="30">30 minuten</option>
+      <option value="60" selected>1 uur</option>
+      <option value="120">2 uur</option>
+    </select>
+    <div class="sub-lbl">Aantal challenges in de aanbieding: <span id="lightning-aantal-lbl" style="color:var(--acc);">3</span></div>
+    <input type="range" id="lightning-aantal" class="lightning-slider" min="1" max="5" value="3"
+           oninput="document.getElementById('lightning-aantal-lbl').textContent=this.value">
+    <div id="lightning-mel" style="margin-top:10px;"></div>
+    <div class="modal-btns" style="margin-top:16px;">
+      <button class="btn btn-grijs" onclick="sluitLightningModal()">Annuleer</button>
+      <button class="btn btn-lightning" onclick="startLightningRound()">&#9889; Start ronde</button>
     </div>
   </div>
 </div>
@@ -814,6 +900,12 @@ const STANDAARD_CHALLENGES = [
 
 // Actuele, bewerkbare challenge-lijst (gevuld vanuit Supabase in laadChallenges)
 let CHALLENGES = STANDAARD_CHALLENGES.map(c => ({ ...c }));
+
+// ── Lightning Round ──────────────────────────────────────────
+// Eén actieve ronde tegelijk. Structuur:
+// { id, eindtijd(ISO), aanbiedingen:[{ id, challNaam, basisPrijs, korting, prijs }] }
+let lightningRonde = null;     // actieve ronde (of null)
+let lightningTimer = null;     // interval-id voor de countdown
 
 // ═══════════════════════════════════════════════════════════
 // DATAMODEL v4
@@ -970,6 +1062,7 @@ async function loadData(stil = false) {
     // Challenges apart laden: als de tabel nog niet bestaat, valt dit stil terug
     // op de standaardlijst zonder de hele app te laten crashen.
     await laadChallenges();
+    await laadLightning();
 
     if (!stil) toonLaadState('klaar');  // gelukt → overlay weg
 
@@ -1049,6 +1142,7 @@ function setupRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'spelers' }, herlaadVanRealtime)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sessies' }, herlaadVanRealtime)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges' }, herlaadVanRealtime)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'lightning_rounds' }, herlaadVanRealtime)
     .subscribe((status) => console.log('[Supabase] realtime status:', status));
 }
 
@@ -1584,6 +1678,196 @@ async function laadChallenges() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// LIGHTNING ROUND
+// ═══════════════════════════════════════════════════════════
+
+// Haal de actieve lightning round op (eindtijd nog in de toekomst).
+async function laadLightning() {
+  try {
+    const { data: rows, error } = await sb.from('lightning_rounds').select('*');
+    if (error) throw error;
+    const nu = Date.now();
+    const actief = (rows || [])
+      .filter(r => new Date(r.eindtijd).getTime() > nu)
+      .sort((a, b) => new Date(b.eindtijd) - new Date(a.eindtijd))[0];
+    lightningRonde = actief
+      ? { id: actief.id, eindtijd: actief.eindtijd, aanbiedingen: actief.aanbiedingen || [] }
+      : null;
+  } catch(e) {
+    console.warn('Lightning-tabel niet beschikbaar:', e?.message);
+    lightningRonde = null;
+  }
+}
+
+// Gewogen willekeurige korting: 10–50% in stappen van 10; hogere korting = zeldzamer.
+function willekeurigeKorting() {
+  const opties = [
+    { korting: 0.10, gewicht: 5 },
+    { korting: 0.20, gewicht: 4 },
+    { korting: 0.30, gewicht: 3 },
+    { korting: 0.40, gewicht: 2 },
+    { korting: 0.50, gewicht: 1 },
+  ];
+  const totaal = opties.reduce((s, o) => s + o.gewicht, 0);
+  let r = Math.random() * totaal;
+  for (const o of opties) { if ((r -= o.gewicht) < 0) return o.korting; }
+  return 0.10;
+}
+
+function openLightningModal()  { document.getElementById('lightning-modal').classList.add('aan'); }
+function sluitLightningModal() { document.getElementById('lightning-modal').classList.remove('aan'); }
+
+// Start een nieuwe lightning round (max. één tegelijk).
+function startLightningRound() {
+  const melEl = document.getElementById('lightning-mel');
+  melEl.innerHTML = '';
+  if (!sb) { melEl.innerHTML = '<div class="mel mel-err">Geen serververbinding.</div>'; return; }
+  if (lightningRonde && new Date(lightningRonde.eindtijd).getTime() > Date.now()) {
+    melEl.innerHTML = '<div class="mel mel-err">Er loopt al een lightning round.</div>'; return;
+  }
+  if (!CHALLENGES.length) {
+    melEl.innerHTML = '<div class="mel mel-err">Er zijn nog geen challenges om aan te bieden.</div>'; return;
+  }
+
+  const minuten = parseInt(document.getElementById('lightning-duur').value, 10) || 60;
+  let   aantal  = parseInt(document.getElementById('lightning-aantal').value, 10) || 1;
+  aantal = Math.min(aantal, CHALLENGES.length);
+
+  // Willekeurige, unieke challenges kiezen (Fisher-Yates shuffle)
+  const pool = CHALLENGES.map(c => ({ ...c }));
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const aanbiedingen = pool.slice(0, aantal).map(c => {
+    const korting = willekeurigeKorting();
+    return { id: uid(), challNaam: c.naam, basisPrijs: c.prijs, korting,
+             prijs: Math.round(c.prijs * (1 - korting) * 100) / 100 };
+  });
+
+  const ronde = {
+    id: uid(),
+    eindtijd: new Date(Date.now() + minuten * 60000).toISOString(),
+    aanbiedingen
+  };
+  lightningRonde = ronde;
+  recentOpslagTijd = Date.now();
+
+  // Oude rondes opruimen, dan de nieuwe wegschrijven
+  (async () => {
+    await sb.from('lightning_rounds').delete().neq('id', ronde.id);
+    const ins = await sb.from('lightning_rounds').insert(ronde);
+    if (ins.error) throw ins.error;
+  })().catch(err => toonFout('Lightning round starten mislukt: ' + (err?.message || err?.code || '')));
+
+  sluitLightningModal();
+  renderChallenges();
+}
+
+// Koop een aanbieding met korting (voor de gekozen ontvanger) — kan maar 1x.
+function koopLightning(offerId) {
+  if (!lightningRonde) return;
+  const offer = lightningRonde.aanbiedingen.find(o => o.id === offerId);
+  if (!offer) return;
+
+  const koperId = document.getElementById('ch-koper')?.value;
+  const ontvId  = document.getElementById('ch-ontv')?.value;
+  const melEl   = document.getElementById('ch-mel');
+  melEl.innerHTML = '';
+  if (!koperId || !ontvId) {
+    melEl.innerHTML = '<div class="mel mel-err">Kies eerst bovenaan wie koopt en voor wie.</div>';
+    document.getElementById('ch-koper').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (koperId === ontvId) {
+    melEl.innerHTML = '<div class="mel mel-err">Koper en ontvanger mogen niet dezelfde zijn.</div>'; return;
+  }
+
+  const doelSessie = activeSessie() || getOfMaakLosseSessie();
+  if (!doelSessie.deelnemers.includes(koperId)) doelSessie.deelnemers.push(koperId);
+  if (!doelSessie.deelnemers.includes(ontvId))  doelSessie.deelnemers.push(ontvId);
+
+  const tijd = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  doelSessie.challengeAankopen.unshift({
+    id: uid(), koperId, ontvangerId: ontvId,
+    challNaam: offer.challNaam, prijs: offer.prijs, tijd,
+    geweigerd: false, lightning: true, korting: offer.korting, basisPrijs: offer.basisPrijs
+  });
+
+  // Aanbieding verkocht → uit de ronde halen
+  lightningRonde.aanbiedingen = lightningRonde.aanbiedingen.filter(o => o.id !== offerId);
+  recentOpslagTijd = Date.now();
+  (async () => {
+    const upd = await sb.from('lightning_rounds')
+      .update({ aanbiedingen: lightningRonde.aanbiedingen }).eq('id', lightningRonde.id);
+    if (upd.error) throw upd.error;
+  })().catch(err => toonFout('Bijwerken lightning round mislukt: ' + (err?.message || err?.code || '')));
+
+  saveData();
+  renderChallenges();
+  renderLeaderboard();
+}
+
+// Render de lightning-kaart: startknop, of de actieve ronde met countdown + aanbiedingen.
+function renderLightning() {
+  const el = document.getElementById('lightning-inhoud');
+  if (!el) return;
+  if (lightningTimer) { clearInterval(lightningTimer); lightningTimer = null; }
+
+  const actief = lightningRonde && new Date(lightningRonde.eindtijd).getTime() > Date.now();
+
+  if (!actief) {
+    lightningRonde = null;
+    el.innerHTML = `
+      <div class="k-titel lightning-titel" style="font-size:13px;">&#9889; Lightning Round</div>
+      <div class="lightning-intro">Zet tijdelijk challenges in de aanbieding met een willekeurige korting (10–50%). Wie het eerst is, koopt 'm met korting.</div>
+      <button class="btn btn-lightning btn-vol" onclick="openLightningModal()">&#9889; Start Lightning Round</button>`;
+    return;
+  }
+
+  const offers = lightningRonde.aanbiedingen;
+  const offersHTML = offers.length
+    ? offers.map(o => `
+        <div class="lightning-offer">
+          <div class="lightning-offer-info">
+            <div class="lightning-offer-naam">${esc(o.challNaam)}</div>
+            <div class="lightning-offer-prijs"><s>${eur(o.basisPrijs)}</s> <b>${eur(o.prijs)}</b></div>
+          </div>
+          <span class="lightning-korting">-${Math.round(o.korting * 100)}%</span>
+          <button class="lightning-koop" onclick="koopLightning('${o.id}')">Koop</button>
+        </div>`).join('')
+    : '<div class="lightning-uitverkocht">Alle aanbiedingen zijn verkocht! &#127881;</div>';
+
+  el.innerHTML = `
+    <div class="lightning-live">
+      <div class="lightning-live-kop">
+        <span class="lightning-titel" style="font-size:16px;">&#9889; Lightning Round</span>
+        <span class="lightning-timer" id="lightning-timer">--:--</span>
+      </div>
+      ${offersHTML}
+    </div>`;
+
+  updateLightningCountdown();
+  lightningTimer = setInterval(updateLightningCountdown, 1000);
+}
+
+// Werk de countdown bij; bij afloop de ronde verbergen.
+function updateLightningCountdown() {
+  const tEl = document.getElementById('lightning-timer');
+  if (!lightningRonde || !tEl) { if (lightningTimer) { clearInterval(lightningTimer); lightningTimer = null; } return; }
+  const over = Math.floor((new Date(lightningRonde.eindtijd).getTime() - Date.now()) / 1000);
+  if (over <= 0) {
+    clearInterval(lightningTimer); lightningTimer = null;
+    lightningRonde = null;
+    renderLightning();   // terug naar de startknop
+    return;
+  }
+  const u = Math.floor(over / 3600), m = Math.floor((over % 3600) / 60), s = over % 60;
+  const p2 = n => String(n).padStart(2, '0');
+  tEl.textContent = u > 0 ? `${u}:${p2(m)}:${p2(s)}` : `${p2(m)}:${p2(s)}`;
+}
+
 // Nieuwe challenge toevoegen (naam + prijs) → direct naar Supabase
 function voegChallengeToe() {
   const naamEl  = document.getElementById('nieuwe-chall-naam');
@@ -1642,6 +1926,8 @@ function renderChallenges() {
   const ontvSel   = document.getElementById('ch-ontv');
   if (!koperSel || !ontvSel) return;
 
+  renderLightning();   // lightning-kaart (startknop of actieve ronde)
+
   const wasKoper = koperSel.value;
   const wasOntv  = ontvSel.value;
 
@@ -1693,15 +1979,23 @@ function renderChallenges() {
     const tekst = c.geweigerd
       ? `<strong>${oNaam}</strong> weigerde ${challSpan} → betaalt aan <strong>${kNaam}</strong>`
       : `<strong>${kNaam}</strong> kocht ${challSpan} voor <strong>${oNaam}</strong>`;
+    // Klasse & badge: geweigerd (rood) / lightning (paars ⚡) / gewoon gekocht (groen)
+    const klass = c.geweigerd ? 'geweigerd' : c.lightning ? 'lightning' : 'gekocht';
     const badge = c.geweigerd
       ? '<span style="color:var(--rood);font-weight:700;">GEWEIGERD</span>'
-      : '<span style="color:var(--groen);font-weight:700;">GEKOCHT</span>';
+      : c.lightning
+        ? `<span class="lightning-hist-badge">&#9889; LIGHTNING &minus;${Math.round((c.korting || 0) * 100)}%</span>`
+        : '<span style="color:var(--groen);font-weight:700;">GEKOCHT</span>';
+    // Bij lightning ook de originele prijs tonen
+    const prijsTekst = (c.lightning && c.basisPrijs != null)
+      ? `<s style="color:var(--zacht);">${eur(c.basisPrijs)}</s> ${eur(c.prijs)}`
+      : eur(c.prijs);
     return `
-      <div class="hist-rij ${c.geweigerd ? 'geweigerd' : 'gekocht'}">
+      <div class="hist-rij ${klass}">
         <div style="flex:1;">
           ${tekst}
           <span style="display:block;font-size:12px;color:var(--zacht);margin-top:3px;">
-            ${badge} &middot; ${c.tijd} &middot; ${eur(c.prijs)} &middot; ${esc(c.sessieNaam)}
+            ${badge} &middot; ${c.tijd} &middot; ${prijsTekst} &middot; ${esc(c.sessieNaam)}
           </span>
         </div>
         <button class="x-btn" onclick="verwijderChallengeAankoop('${c.id}')" title="Ongedaan maken">&#10005;</button>
