@@ -7,19 +7,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Pokersaldo</title>
 
-  <!-- PWA: manifest + browser/thema-kleur (donker) -->
+  <!-- PWA: manifest + browser/thema-kleur (donker navy) -->
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0d1117">
+  <meta name="theme-color" content="#0A0C12">
 
   <!-- iOS: open zonder browserbalk als 'standalone' app vanaf het beginscherm -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pokersaldo">
-  <link rel="apple-touch-icon" href="icon-512.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <!-- Android/Chrome: idem standalone + favicon -->
+  <!-- Favicons (SVG voor moderne browsers, ICO als fallback) -->
   <meta name="mobile-web-app-capable" content="yes">
-  <link rel="icon" type="image/png" href="icon-512.png">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="any">
+
+  <!-- Lettertypes: Inter (UI) + Space Grotesk (hero-cijfers/koppen) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after {
       box-sizing: border-box; margin: 0; padding: 0;
@@ -27,26 +33,50 @@
     }
 
     :root {
-      --bg:       #0d1117;
-      --surf:     #161b27;
-      --surf2:    #1d2438;
-      --rand:     #252e42;
-      --tekst:    #dde3f0;
-      --zacht:    #6e7a94;
-      --acc:      #f0a428;
-      --acc-bg:   rgba(240,164,40,.12);
-      --groen:    #2ddb7c;
-      --groen-bg: rgba(45,219,124,.1);
-      --rood:     #ff5a5a;
-      --rood-bg:  rgba(255,90,90,.1);
-      --nav-h:    62px;
-      --r:        14px;
+      /* Basis (deep near-black navy) */
+      --bg:       #0A0C12;
+      --bg2:      #0E1220;
+      --surf:     #12151F;
+      --surf2:    #191E2C;
+      --rand:     rgba(255,255,255,.08);
+      --tekst:    #F3F5F9;
+      --zacht:    #9AA3B2;
+
+      /* Blauw accent + gradient + glow */
+      --acc:       #5B9BFF;
+      --acc-bg:    rgba(46,107,255,.16);
+      --primary-1: #2E6BFF;
+      --primary-2: #5B9BFF;
+      --grad:      linear-gradient(135deg, #2E6BFF 0%, #5B9BFF 100%);
+      --glow:      rgba(46,107,255,.45);
+
+      /* Glasmorfisme */
+      --glass:        rgba(255,255,255,.05);
+      --glass-2:      rgba(255,255,255,.08);
+      --glass-border: rgba(255,255,255,.10);
+
+      /* Semantisch */
+      --groen:    #34D399;
+      --groen-bg: rgba(52,211,153,.12);
+      --rood:     #F87171;
+      --rood-bg:  rgba(248,113,113,.12);
+
+      /* Vorm */
+      --nav-h: 66px;
+      --r:     22px;
+      --r-btn: 15px;
+
+      --font:         'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-display: 'Space Grotesk', 'Inter', sans-serif;
     }
+
+    /* Reserveer altijd ruimte voor de scrollbar, zodat de breedte niet verspringt
+       tussen pagina's met/zonder scrollbar (anders schuift de gecentreerde nav). */
+    html { scrollbar-gutter: stable; }
 
     html, body {
       height: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
+      font-family: var(--font);
       color: var(--tekst);
       font-size: 16px;
       line-height: 1.5;
@@ -56,6 +86,24 @@
       user-select: none;
       touch-action: manipulation;       /* schakelt de dubbeltik-zoom uit */
     }
+    body {
+      /* Donkere basis + twee zachte blauwe radiale gloed-plekken */
+      background:
+        radial-gradient(1100px 620px at 50% -12%, rgba(46,107,255,.20), transparent 60%),
+        radial-gradient(900px 520px at 108% 108%, rgba(91,155,255,.12), transparent 55%),
+        var(--bg);
+      background-attachment: fixed;
+    }
+    /* Zeer subtiel grid op de achtergrond, uitvloeiend naar de randen */
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+      background-size: 42px 42px;
+      -webkit-mask-image: radial-gradient(circle at 50% 24%, #000 0%, transparent 72%);
+              mask-image: radial-gradient(circle at 50% 24%, #000 0%, transparent 72%);
+    }
     /* Invoervelden moeten WEL selecteerbaar/bewerkbaar blijven */
     input, textarea, select, [contenteditable] {
       -webkit-user-select: text;
@@ -63,12 +111,13 @@
     }
 
     /* Volle hoogte; dvh volgt de echte zichtbare hoogte als de adresbalk verschijnt/verdwijnt */
-    #app { max-width: 600px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
+    #app { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
 
     header {
-      background: var(--surf);
-      border-bottom: 1px solid var(--rand);
-      padding: 13px 16px;
+      background: rgba(10,12,18,.55);
+      -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 13px 18px;
       /* Onder de notch/statusbalk vallen (status bar = black-translucent op iOS) */
       padding-top: calc(13px + env(safe-area-inset-top));
       position: sticky;
@@ -78,22 +127,38 @@
       align-items: center;
       justify-content: space-between;
     }
-    header h1 { font-size: 18px; font-weight: 700; color: var(--acc); letter-spacing: .3px; }
+    .merk { display: flex; align-items: center; gap: 10px; }
+    .merk-icoon {
+      width: 30px; height: 30px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      filter: drop-shadow(0 2px 8px var(--glow));
+    }
+    .merk-icoon svg { width: 100%; height: 100%; }
+    header h1 {
+      font-family: var(--font-display);
+      font-size: 20px; font-weight: 700; letter-spacing: .2px;
+      background: var(--grad);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
 
     /* Onderaan ruimte voor de nav én de home-indicator (safe-area) */
-    .pagina { display: none; padding: 14px 12px calc(var(--nav-h) + 18px + env(safe-area-inset-bottom)); }
-    .pagina.actief { display: block; }
+    .pagina { display: none; padding: 16px 14px calc(var(--nav-h) + 20px + env(safe-area-inset-bottom)); }
+    .pagina.actief { display: block; animation: fadeIn .2s ease; }
+    /* Alleen opacity (geen transform) → geen containing-block/compositing-verspringing */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     nav {
       position: fixed;
-      bottom: 0; left: 50%;
-      transform: translateX(-50%);
+      /* Transform-vrij centreren (voorkomt sub-pixel verspringen bij paginawissel) */
+      bottom: 0; left: 0; right: 0;
+      margin: 0 auto;
       width: 100%; max-width: 600px;
       /* Knoppen blijven op nav-hoogte; de balk loopt door tot achter de home-indicator */
       height: calc(var(--nav-h) + env(safe-area-inset-bottom));
       padding-bottom: env(safe-area-inset-bottom);
-      background: var(--surf);
-      border-top: 1px solid var(--rand);
+      background: rgba(10,12,18,.65);
+      -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px);
+      border-top: 1px solid var(--glass-border);
       display: flex;
       z-index: 50;
     }
@@ -101,56 +166,63 @@
       flex: 1;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 3px;
+      gap: 4px;
       background: none; border: none;
       cursor: pointer;
       color: var(--zacht);
       font-size: 10px; font-weight: 600;
       letter-spacing: .04em;
       -webkit-tap-highlight-color: transparent;
-      transition: color .15s;
+      transition: color .18s, transform .1s;
     }
     .nav-k.actief { color: var(--acc); }
-    .nav-k svg { width: 22px; height: 22px; }
+    .nav-k.actief svg { filter: drop-shadow(0 0 8px var(--glow)); }
+    .nav-k svg { width: 22px; height: 22px; transition: filter .18s; }
     .nav-k:active { transform: scale(.9); }   /* voelbare "ingedrukt"-reactie */
 
     .k {
-      background: var(--surf);
-      border: 1px solid var(--rand);
+      background: var(--glass);
+      -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
       border-radius: var(--r);
-      padding: 14px;
-      margin-bottom: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.35);
     }
     .k-titel {
       font-size: 11px; font-weight: 700;
       color: var(--zacht);
-      text-transform: uppercase; letter-spacing: .07em;
-      margin-bottom: 10px;
+      text-transform: uppercase; letter-spacing: .09em;
+      margin-bottom: 12px;
     }
 
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
-      padding: 11px 16px;
+      padding: 12px 18px;
       font-size: 15px; font-weight: 600;
-      border: none; border-radius: 8px;
+      border: none; border-radius: var(--r-btn);
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
-      transition: opacity .15s, transform .1s;
+      transition: transform .12s, box-shadow .18s, filter .18s;
       white-space: nowrap;
     }
     .btn:active { transform: scale(.97); }
-    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-    .btn-acc  { background: var(--acc);     color: #0d1117; }
-    .btn-rood { background: var(--rood-bg); color: var(--rood); }
-    .btn-grijs{ background: var(--surf2);   color: var(--tekst); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-acc  {
+      background: var(--grad); color: #fff;
+      box-shadow: 0 8px 22px -6px var(--glow), inset 0 1px 0 rgba(255,255,255,.25);
+    }
+    .btn-acc:active { box-shadow: 0 4px 14px -6px var(--glow); }
+    .btn-rood { background: var(--rood-bg); color: var(--rood); border: 1px solid rgba(248,113,113,.3); }
+    .btn-grijs{ background: var(--glass-2); color: var(--tekst); border: 1px solid var(--glass-border); }
     .btn-vol  { width: 100%; }
 
     .veld {
       width: 100%;
-      padding: 11px 13px;
+      padding: 12px 14px;
       font-size: 16px;
-      border: 1.5px solid var(--rand);
-      border-radius: 8px;
+      border: 1.5px solid var(--glass-border);
+      border-radius: 12px;
       background: var(--surf2);
       color: var(--tekst);
       outline: none;
@@ -158,85 +230,131 @@
       appearance: none;
       -webkit-appearance: none;
     }
-    .veld:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(240,164,40,.15); }
+    .veld:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(46,107,255,.22); }
     .veld::placeholder { color: var(--zacht); }
 
     .eur-wrap { position: relative; flex: 1; }
     .eur-wrap::before {
       content: '€';
-      position: absolute; left: 12px; top: 50%;
+      position: absolute; left: 13px; top: 50%;
       transform: translateY(-50%);
       color: var(--zacht); pointer-events: none;
     }
-    .eur-wrap .veld { padding-left: 26px; }
+    .eur-wrap .veld { padding-left: 27px; }
 
     select.veld {
       appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e7a94' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA3B2' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 10px center;
+      background-position: right 12px center;
       background-size: 16px;
-      padding-right: 30px;
+      padding-right: 32px;
     }
-    select.veld option { background: var(--surf2); }
+    select.veld option { background: var(--surf2); color: var(--tekst); }
 
     .rij { display: flex; gap: 8px; align-items: stretch; }
-    .rij .veld, .rij .eur-wrap { flex: 1; }
+    .rij .veld, .rij .eur-wrap { flex: 1; min-width: 0; }  /* laat flex-velden krimpen (geen overflow) */
 
-    .mel { padding: 10px 13px; border-radius: 8px; font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+    .mel { padding: 11px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
     .mel-warn { background: rgba(240,164,40,.1);  border: 1px solid rgba(240,164,40,.35); color: #ffc45a; }
-    .mel-ok   { background: var(--groen-bg);       border: 1px solid rgba(45,219,124,.3);  color: var(--groen); }
-    .mel-err  { background: var(--rood-bg);         border: 1px solid rgba(255,90,90,.3);   color: var(--rood); }
+    .mel-ok   { background: var(--groen-bg);       border: 1px solid rgba(52,211,153,.3);  color: var(--groen); }
+    .mel-err  { background: var(--rood-bg);         border: 1px solid rgba(248,113,113,.3);  color: var(--rood); }
 
     .sub-lbl {
       font-size: 11px; font-weight: 700;
       color: var(--zacht);
-      text-transform: uppercase; letter-spacing: .06em;
-      margin: 12px 0 6px;
+      text-transform: uppercase; letter-spacing: .07em;
+      margin: 14px 0 7px;
     }
 
     .x-btn {
       background: none; border: none;
       cursor: pointer; color: var(--zacht);
       padding: 3px 6px; font-size: 14px;
-      border-radius: 4px;
+      border-radius: 6px;
       -webkit-tap-highlight-color: transparent;
       line-height: 1;
+      transition: color .15s;
     }
     .x-btn:hover { color: var(--rood); }
 
     .pot-balk {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 11px 13px;
-      background: var(--surf2); border-radius: 8px;
+      padding: 13px 15px;
+      background: var(--acc-bg); border: 1px solid var(--glass-border);
+      border-radius: 14px;
       margin-top: 4px;
     }
 
     .hist-rij {
       display: flex; align-items: flex-start;
       justify-content: space-between;
-      padding: 9px 0;
-      border-bottom: 1px solid var(--rand);
+      padding: 11px 13px; margin-bottom: 8px;
+      border: 1.5px solid var(--glass-border); border-radius: 14px;
+      background: var(--glass);
       font-size: 14px; gap: 8px;
     }
-    .hist-rij:last-child { border-bottom: none; }
+    .hist-rij:last-child { margin-bottom: 0; }
+    .hist-rij.gekocht   { border-color: rgba(52,211,153,.5);  box-shadow: inset 0 0 0 1px rgba(52,211,153,.06); }
+    .hist-rij.geweigerd { border-color: rgba(248,113,113,.5); box-shadow: inset 0 0 0 1px rgba(248,113,113,.06); }
+
+    /* Weiger-checkbox bij het kopen van een challenge */
+    .weiger-check {
+      display: flex; align-items: center; gap: 9px;
+      padding: 10px 0; font-size: 14px; cursor: pointer;
+    }
+    .weiger-check input { width: 18px; height: 18px; accent-color: var(--rood); flex-shrink: 0; }
 
     .lb-rij {
       display: flex; align-items: center; gap: 12px;
-      padding: 13px 0;
-      border-bottom: 1px solid var(--rand);
+      padding: 14px 12px;
+      margin-bottom: 8px;
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      background: var(--glass);
+      cursor: pointer;                       /* klikbaar → opent spelerstatistieken */
+      transition: background .15s, border-color .15s, transform .1s;
     }
-    .lb-rij:last-child { border-bottom: none; }
+    .lb-rij:last-child { margin-bottom: 0; }
+    .lb-rij:hover  { border-color: rgba(255,255,255,.18); }
+    .lb-rij:active { transform: scale(.99); background: var(--glass-2); }
+    /* De koploper krijgt een premium blauwe gloed-rand */
+    .lb-rij:first-child {
+      border-color: rgba(46,107,255,.5);
+      background: linear-gradient(135deg, rgba(46,107,255,.14), rgba(91,155,255,.05));
+      box-shadow: 0 6px 26px -8px var(--glow);
+    }
     .lb-pos {
-      width: 30px; height: 30px; border-radius: 50%;
+      width: 32px; height: 32px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 700;
+      font-size: 13px; font-weight: 700; font-family: var(--font-display);
       background: var(--surf2); color: var(--zacht);
       flex-shrink: 0;
     }
-    .lb-pos.goud { background: var(--acc-bg); color: var(--acc); font-size: 16px; }
+    .lb-pos.goud { background: var(--grad); color: #fff; box-shadow: 0 0 16px var(--glow); }
     .lb-naam   { flex: 1; font-weight: 600; font-size: 15px; }
-    .lb-bedrag { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .lb-bedrag { font-family: var(--font-display); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .lb-chevron { color: var(--zacht); font-size: 18px; flex-shrink: 0; margin-left: -2px; }
+    /* Leaderboard toont losse kaartjes → buitenste .k-frame weghalen (geen kaart-in-kaart) */
+    #p-leaderboard > .k {
+      background: none; border: none; box-shadow: none; padding: 0;
+      -webkit-backdrop-filter: none; backdrop-filter: none;
+    }
+
+    /* ── Speler-detail: grafiek + resultaat per sessie ── */
+    .grafiek-wrap {
+      background: linear-gradient(180deg, rgba(46,107,255,.08), rgba(255,255,255,.03));
+      border: 1px solid var(--glass-border);
+      border-radius: 16px; padding: 14px 10px 6px; margin-bottom: 18px;
+    }
+    .grafiek-wrap svg { width: 100%; height: auto; display: block; }
+    .det-rij {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--rand);
+    }
+    .det-rij:last-child { border-bottom: none; }
+    .det-naam  { font-weight: 600; font-size: 14px; }
+    .det-datum { font-size: 12px; color: var(--zacht); margin-top: 2px; }
 
     .pos { color: var(--groen); }
     .neg { color: var(--rood); }
@@ -247,57 +365,64 @@
     .modal-bg {
       display: none;
       position: fixed; inset: 0;
-      background: rgba(0,0,0,.6);
+      background: rgba(0,0,0,.55);
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
       z-index: 100;
       align-items: flex-end; justify-content: center;
     }
     .modal-bg.aan { display: flex; }
     .modal {
-      background: var(--surf);
-      border: 1px solid var(--rand);
-      border-radius: 16px 16px 0 0;
-      padding: 22px 16px 36px;
+      background: rgba(18,21,31,.82);
+      -webkit-backdrop-filter: blur(26px); backdrop-filter: blur(26px);
+      border: 1px solid var(--glass-border);
+      border-bottom: none;
+      border-radius: 26px 26px 0 0;
+      padding: 24px 18px 40px;
       width: 100%; max-width: 600px;
+      box-shadow: 0 -12px 44px rgba(0,0,0,.55);
+      animation: sheetUp .28s cubic-bezier(.22,1,.36,1);
     }
-    .modal h3 { font-size: 18px; margin-bottom: 6px; }
+    @keyframes sheetUp { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+    .modal h3 { font-family: var(--font-display); font-size: 19px; margin-bottom: 6px; }
     .modal p  { color: var(--zacht); font-size: 15px; margin-bottom: 18px; }
     .modal-btns { display: flex; gap: 10px; }
     .modal-btns .btn { flex: 1; }
 
-    /* ── Spel sub-tabs ── */
+    /* ── Spel sub-tabs (pill-segmented control) ── */
     .spel-tabs {
-      display: flex; background: var(--surf2);
-      border-radius: 10px; padding: 3px; margin-bottom: 14px;
+      display: flex; background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px; padding: 4px; margin-bottom: 14px;
     }
     .spel-tab {
-      flex: 1; padding: 9px;
+      flex: 1; padding: 10px;
       font-size: 14px; font-weight: 600;
-      border: none; border-radius: 8px;
+      border: none; border-radius: 11px;
       background: none; color: var(--zacht);
       cursor: pointer;
-      transition: background .15s, color .15s;
+      transition: background .2s, color .2s, box-shadow .2s;
       -webkit-tap-highlight-color: transparent;
     }
-    .spel-tab.actief { background: var(--surf); color: var(--tekst); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+    .spel-tab.actief { background: var(--grad); color: #fff; box-shadow: 0 6px 16px -6px var(--glow); }
     .spel-sectie { display: none; }
     .spel-sectie.actief { display: block; }
 
     /* ── Inkoop-kaarten ── */
     .ink-kaart {
-      background: var(--surf);
-      border: 1px solid var(--rand);
-      border-radius: var(--r);
-      padding: 12px 14px; margin-bottom: 8px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 13px 15px; margin-bottom: 8px;
     }
     .ink-kop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .ink-naam   { font-size: 16px; font-weight: 700; }
-    .ink-totaal { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .ink-totaal { font-family: var(--font-display); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
     .snelknop-rij { display: flex; gap: 6px; align-items: stretch; flex-wrap: wrap; }
     .snelknop {
       padding: 10px 13px; font-size: 14px; font-weight: 700;
       background: var(--surf2); color: var(--tekst);
-      border: 1.5px solid var(--rand); border-radius: 8px;
+      border: 1.5px solid var(--glass-border); border-radius: 11px;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       transition: border-color .12s, color .12s, background .12s;
@@ -317,18 +442,18 @@
     .ink-chip {
       display: inline-flex; align-items: center; gap: 5px;
       padding: 4px 9px;
-      background: var(--surf2); border: 1px solid var(--rand);
+      background: var(--surf2); border: 1px solid var(--glass-border);
       border-radius: 20px; font-size: 13px; color: var(--zacht);
     }
     .ink-chip .x-btn { padding: 0 2px; font-size: 12px; }
 
     /* ── Uitcash-kaarten ── */
-    .uit-kaart { padding: 12px 0; border-bottom: 1px solid var(--rand); }
+    .uit-kaart { padding: 13px 0; border-bottom: 1px solid var(--rand); }
     .uit-kaart:last-child { border-bottom: none; }
     .uit-kop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .uit-naam  { font-weight: 600; font-size: 15px; }
     .uit-sub   { font-size: 12px; color: var(--zacht); margin-top: 1px; }
-    .uit-netto { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .uit-netto { font-family: var(--font-display); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
     /* ── Deelnemers checkboxes ── */
     .deeln-grid {
@@ -337,9 +462,9 @@
     }
     .deeln-label {
       display: flex; align-items: center; gap: 10px;
-      padding: 11px 12px;
-      background: var(--surf2); border: 1.5px solid var(--rand);
-      border-radius: 8px; cursor: pointer;
+      padding: 12px 13px;
+      background: var(--surf2); border: 1.5px solid var(--glass-border);
+      border-radius: 12px; cursor: pointer;
       font-size: 14px; font-weight: 600;
       transition: border-color .12s, background .12s;
       -webkit-tap-highlight-color: transparent;
@@ -348,29 +473,31 @@
     .deeln-label:has(input:checked) { border-color: var(--acc); background: var(--acc-bg); }
     .deeln-label input[type="checkbox"] {
       width: 16px; height: 16px;
-      accent-color: var(--acc); flex-shrink: 0;
+      accent-color: var(--primary-1); flex-shrink: 0;
     }
 
     /* ── Sessie header (actieve sessie) ── */
     .sessie-hdr {
       display: flex; justify-content: space-between; align-items: flex-start;
-      padding: 12px 14px;
-      background: var(--surf); border: 1px solid var(--rand);
-      border-radius: var(--r); margin-bottom: 12px;
+      padding: 14px 15px;
+      background: linear-gradient(135deg, rgba(46,107,255,.12), rgba(255,255,255,.03));
+      border: 1px solid var(--glass-border);
+      border-radius: 18px; margin-bottom: 12px;
     }
-    .sessie-naam { font-size: 15px; font-weight: 700; }
+    .sessie-naam { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
     .sessie-meta { font-size: 12px; color: var(--zacht); margin-top: 3px; }
 
     /* ── Sessie-kaarten (geschiedenis) ── */
     .sessie-kaart {
-      background: var(--surf); border: 1px solid var(--rand);
-      border-radius: var(--r); padding: 14px; margin-bottom: 10px;
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 18px; padding: 15px; margin-bottom: 10px;
+      box-shadow: 0 6px 22px rgba(0,0,0,.28);
     }
     .sessie-kaart-kop { display: flex; justify-content: space-between; align-items: flex-start; }
-    .sessie-kaart-naam { font-weight: 700; font-size: 15px; }
+    .sessie-kaart-naam { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
     .badge {
       font-size: 11px; font-weight: 700;
-      padding: 3px 8px; border-radius: 20px;
+      padding: 3px 9px; border-radius: 20px;
       text-transform: uppercase; letter-spacing: .05em;
       flex-shrink: 0;
     }
@@ -378,26 +505,40 @@
     .badge-klaar  { background: var(--groen-bg); color: var(--groen); }
 
     /* ── Challenges tier-headers ── */
-    .tier-hdr { display: flex; align-items: center; gap: 10px; margin: 14px 0 6px; }
+    .tier-hdr { display: flex; align-items: center; gap: 10px; margin: 16px 0 6px; }
     .tier-prijs {
-      font-size: 12px; font-weight: 700;
-      color: var(--acc); background: var(--acc-bg);
-      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+      font-size: 12px; font-weight: 700; font-family: var(--font-display);
+      color: #fff; background: var(--grad);
+      padding: 3px 11px; border-radius: 20px; white-space: nowrap;
+      box-shadow: 0 4px 12px -4px var(--glow);
     }
     .tier-lijn { flex: 1; height: 1px; background: var(--rand); }
-    .chal-item { padding: 8px 0; border-bottom: 1px solid var(--rand); font-size: 14px; }
+    .chal-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 0; border-bottom: 1px solid var(--rand); font-size: 14px;
+    }
     .chal-item:last-child { border-bottom: none; }
+    .chal-naam { flex: 1; }
+    .chal-acties { display: flex; gap: 4px; flex-shrink: 0; }
+    .chal-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--zacht); font-size: 15px; line-height: 1;
+      padding: 5px 7px; border-radius: 8px;
+      transition: color .15s, background .15s, transform .1s;
+    }
+    .chal-btn:hover  { color: var(--tekst); background: var(--glass-2); }
+    .chal-btn:active { transform: scale(.88); }
 
     /* ── Settlement ── */
     .verr-rij {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 9px 0; border-bottom: 1px solid var(--rand); font-size: 15px;
+      padding: 10px 0; border-bottom: 1px solid var(--rand); font-size: 15px;
     }
     .verr-rij:last-child { border-bottom: none; }
     .betaal-rij {
       display: flex; align-items: center; gap: 8px;
-      padding: 10px; background: var(--surf2);
-      border-radius: 8px; font-size: 14px; margin-bottom: 6px;
+      padding: 11px; background: var(--surf2); border: 1px solid var(--glass-border);
+      border-radius: 12px; font-size: 14px; margin-bottom: 6px;
     }
     .betaal-pijl { color: var(--acc); font-size: 16px; }
 
@@ -405,7 +546,8 @@
     #laad-overlay {
       display: none;
       position: fixed; inset: 0;
-      background: rgba(13,17,23,.95);
+      background: rgba(10,12,18,.92);
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
       z-index: 200;
       flex-direction: column;
       align-items: center; justify-content: center;
@@ -422,31 +564,33 @@
       background: none; border: none;
     }
     .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid var(--rand);
+      width: 38px; height: 38px;
+      border: 3px solid var(--glass-border);
       border-top-color: var(--acc);
       border-radius: 50%;
       animation: spin .8s linear infinite;
+      filter: drop-shadow(0 0 8px var(--glow));
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── Fout-toast (netwerk/opslagfout) ── */
     #fout-toast {
       display: none;
-      position: fixed; top: 70px; left: 50%;
+      position: fixed; top: calc(70px + env(safe-area-inset-top)); left: 50%;
       transform: translateX(-50%);
-      background: var(--rood-bg);
-      border: 1px solid rgba(255,90,90,.4);
+      background: rgba(248,113,113,.16);
+      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+      border: 1px solid rgba(248,113,113,.4);
       color: var(--rood);
-      padding: 10px 16px;
-      border-radius: 8px;
+      padding: 11px 17px;
+      border-radius: 14px;
       font-size: 14px;
       z-index: 150;
       max-width: 90%; text-align: center;
     }
 
     @media (min-width: 600px) {
-      .pagina { padding: 18px 18px calc(var(--nav-h) + 20px + env(safe-area-inset-bottom)); }
+      .pagina { padding: 20px 20px calc(var(--nav-h) + 22px + env(safe-area-inset-bottom)); }
     }
   </style>
 </head>
@@ -454,8 +598,21 @@
 <div id="app">
 
   <header>
-    <h1>Pokersaldo</h1>
-    <button class="btn btn-rood" style="padding:7px 12px;font-size:13px;" onclick="vraagReset()">Wis alles</button>
+    <div class="merk">
+      <span class="merk-icoon">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="hdrchip" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2E6BFF"/><stop offset="1" stop-color="#6EAAFF"/>
+            </linearGradient>
+          </defs>
+          <circle cx="256" cy="256" r="150" fill="none" stroke="url(#hdrchip)" stroke-width="34"/>
+          <circle cx="256" cy="256" r="104" fill="none" stroke="url(#hdrchip)" stroke-width="22"/>
+          <circle cx="256" cy="256" r="44"  fill="url(#hdrchip)"/>
+        </svg>
+      </span>
+      <h1>Pokersaldo</h1>
+    </div>
   </header>
 
   <!-- ══ PAGINA 1: SPEL ══ -->
@@ -480,17 +637,31 @@
           <option value="">Voor wie?</option>
         </select>
       </div>
-      <div style="margin-bottom:8px;">
+      <div style="margin-bottom:4px;">
         <select class="veld" id="ch-keuze">
           <option value="">Kies challenge...</option>
         </select>
       </div>
+      <label class="weiger-check">
+        <input type="checkbox" id="ch-geweigerd">
+        <span>Speler heeft de challenge geweigerd (geld draait om)</span>
+      </label>
       <div id="ch-mel"></div>
-      <button class="btn btn-acc btn-vol" onclick="koopChallenge()">Koop challenge</button>
+      <button class="btn btn-acc btn-vol" onclick="koopChallenge()">Registreer challenge</button>
     </div>
     <div class="k">
       <div class="k-titel">Alle challenges</div>
       <div id="ch-catalogus"></div>
+    </div>
+    <div class="k">
+      <div class="k-titel">Nieuwe challenge toevoegen</div>
+      <div class="rij" style="margin-bottom:8px;">
+        <input type="text" class="veld" id="nieuwe-chall-naam" placeholder="Naam van challenge" style="flex:2;">
+        <input type="number" inputmode="decimal" class="veld" id="nieuwe-chall-prijs" placeholder="€"
+               style="flex:1;min-width:0;" onkeydown="if(event.key==='Enter')voegChallengeToe()">
+      </div>
+      <div id="chall-beheer-mel"></div>
+      <button class="btn btn-grijs btn-vol" onclick="voegChallengeToe()">+ Toevoegen</button>
     </div>
     <div class="k">
       <div class="k-titel">Gekochte challenges</div>
@@ -546,14 +717,12 @@
   </button>
 </nav>
 
-<!-- Reset-modal -->
-<div class="modal-bg" id="reset-modal" onclick="if(event.target===this)sluitModal()">
-  <div class="modal">
-    <h3>Alles wissen?</h3>
-    <p>Alle sessies en aankopen worden verwijderd. Spelers en startsaldo's blijven behouden.</p>
-    <div class="modal-btns">
-      <button class="btn btn-grijs" onclick="sluitModal()">Annuleer</button>
-      <button class="btn btn-rood" onclick="resetAlles()">Ja, wis alles</button>
+<!-- Speler-detail modal (statistieken + saldoverloop-grafiek) -->
+<div class="modal-bg" id="speler-modal" onclick="if(event.target===this)sluitSpelerModal()">
+  <div class="modal" style="max-height:88vh;overflow-y:auto;padding-bottom:40px;">
+    <div id="speler-detail"></div>
+    <div class="modal-btns" style="margin-top:18px;">
+      <button class="btn btn-grijs btn-vol" onclick="sluitSpelerModal()">Sluiten</button>
     </div>
   </div>
 </div>
@@ -614,7 +783,10 @@ const STANDAARD_SPELERS = [
   { id: 'sp-morris',  naam: 'Morris',  start: -102.43 },
 ];
 
-const CHALLENGES = [
+// Standaard-challenges met vaste IDs (ch-0, ch-1, ...) zodat twee apparaten
+// nooit dubbele rijen aanmaken. Worden 1x naar Supabase geschreven als de
+// challenges-tabel nog leeg is. Daarna is CHALLENGES volledig bewerkbaar.
+const STANDAARD_CHALLENGES = [
   { prijs: 1,   naam: 'Iemand koffie laten zetten' },
   { prijs: 1,   naam: '10 push ups' },
   { prijs: 5,   naam: 'Iemand bier laten halen' },
@@ -627,7 +799,7 @@ const CHALLENGES = [
   { prijs: 10,  naam: '30 minuten je mond houden' },
   { prijs: 25,  naam: 'Habiba challenge' },
   { prijs: 25,  naam: 'Laat een shake maken' },
-  { prijs: 25,  naam: 'Eet een hele ui als appel' },
+  { prijs: 40,  naam: 'Eet een hele ui als appel' },
   { prijs: 30,  naam: 'Mystery sandwich met drie ingrediënten' },
   { prijs: 35,  naam: '24 uur WhatsApp-profielfoto laten veranderen' },
   { prijs: 40,  naam: 'Any time rondje Elswout' },
@@ -638,7 +810,10 @@ const CHALLENGES = [
   { prijs: 75,  naam: 'Fortnite win in story' },
   { prijs: 100, naam: 'Atje kratje' },
   { prijs: 150, naam: 'FPL TikTok posten openbaar' },
-];
+].map((c, i) => ({ id: 'ch-' + i, naam: c.naam, prijs: c.prijs }));
+
+// Actuele, bewerkbare challenge-lijst (gevuld vanuit Supabase in laadChallenges)
+let CHALLENGES = STANDAARD_CHALLENGES.map(c => ({ ...c }));
 
 // ═══════════════════════════════════════════════════════════
 // DATAMODEL v4
@@ -792,6 +967,10 @@ async function loadData(stil = false) {
     });
     if (nieuw) saveData();
 
+    // Challenges apart laden: als de tabel nog niet bestaat, valt dit stil terug
+    // op de standaardlijst zonder de hele app te laten crashen.
+    await laadChallenges();
+
     if (!stil) toonLaadState('klaar');  // gelukt → overlay weg
 
   } catch(e) {
@@ -869,6 +1048,7 @@ function setupRealtime() {
   sb.channel('pokersaldo-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'spelers' }, herlaadVanRealtime)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sessies' }, herlaadVanRealtime)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges' }, herlaadVanRealtime)
     .subscribe((status) => console.log('[Supabase] realtime status:', status));
 }
 
@@ -942,12 +1122,21 @@ function datumLang() {
 
 // Netto resultaat voor een speler binnen één sessie
 function berekenSessieResult(sessie, sp) {
-  const inkoop         = sessie.inkopen.filter(i => i.spelerId === sp.id).reduce((s,i) => s + i.bedrag, 0);
-  const uitEntry       = sessie.uitcashes.find(u => u.spelerId === sp.id);
-  const uitcash        = uitEntry ? uitEntry.bedrag : 0;
-  const challGekocht   = sessie.challengeAankopen.filter(c => c.koperId     === sp.id).reduce((s,c) => s + c.prijs, 0);
-  const challOntvangen = sessie.challengeAankopen.filter(c => c.ontvangerId === sp.id).reduce((s,c) => s + c.prijs, 0);
-  return uitcash - inkoop - challGekocht + challOntvangen;
+  const inkoop   = sessie.inkopen.filter(i => i.spelerId === sp.id).reduce((s,i) => s + i.bedrag, 0);
+  const uitEntry = sessie.uitcashes.find(u => u.spelerId === sp.id);
+  const uitcash  = uitEntry ? uitEntry.bedrag : 0;
+
+  // Challenges: normaal betaalt de koper en ontvangt de ontvanger.
+  // Bij een GEWEIGERDE challenge draait de geldstroom om
+  // (de ontvanger betaalt, de koper ontvangt).
+  let challEffect = 0;
+  sessie.challengeAankopen.forEach(c => {
+    const teken = c.geweigerd ? -1 : 1;
+    if (c.koperId     === sp.id) challEffect += -c.prijs * teken;
+    if (c.ontvangerId === sp.id) challEffect +=  c.prijs * teken;
+  });
+
+  return uitcash - inkoop + challEffect;
 }
 
 // Cumulatief saldo: startsaldo + alle sessieresultaten
@@ -1355,28 +1544,96 @@ function renderUitcashen() {
 // ═══════════════════════════════════════════════════════════
 
 function updateChallDropdown() {
-  const koperId   = document.getElementById('ch-koper')?.value;
-  const sel       = document.getElementById('ch-keuze');
+  const sel     = document.getElementById('ch-keuze');
   if (!sel) return;
-  const was       = sel.value;
-  sel.innerHTML   = '<option value="">Kies challenge...</option>';
-  const koper     = data.spelers.find(s => s.id === koperId);
-  const maxBudget = koper ? berekenSaldo(koper) : Infinity;
-  const prijzen   = [...new Set(CHALLENGES.map(c => c.prijs))].sort((a,b) => a - b);
+  const was     = sel.value;
+  sel.innerHTML = '<option value="">Kies challenge...</option>';
+  const prijzen = [...new Set(CHALLENGES.map(c => c.prijs))].sort((a,b) => a - b);
 
   prijzen.forEach(prijs => {
-    const betaalbaar = prijs <= maxBudget;
-    const groepEl    = document.createElement('optgroup');
-    groepEl.label    = eur(prijs) + (betaalbaar ? '' : ' — te duur');
+    const groepEl = document.createElement('optgroup');
+    groepEl.label = eur(prijs);
     CHALLENGES.filter(c => c.prijs === prijs).forEach(c => {
       const val = JSON.stringify({ naam: c.naam, prijs: c.prijs });
       const opt = document.createElement('option');
-      opt.value = val; opt.textContent = c.naam; opt.disabled = !betaalbaar;
+      opt.value = val; opt.textContent = c.naam;
       if (val === was) opt.selected = true;
       groepEl.appendChild(opt);
     });
     sel.appendChild(groepEl);
   });
+}
+
+// Haal de challenge-catalogus uit Supabase. Leeg → standaardlijst seeden.
+// Tabel bestaat niet / fout → stil terugvallen op de standaardlijst.
+async function laadChallenges() {
+  try {
+    const { data: rows, error } = await sb.from('challenges').select('*');
+    if (error) throw error;
+    if (rows && rows.length) {
+      CHALLENGES = rows.map(r => ({ id: r.id, naam: r.naam, prijs: Number(r.prijs) }))
+                       .sort((a, b) => a.prijs - b.prijs);
+    } else {
+      // Tabel bestaat maar is leeg → standaard 1x wegschrijven
+      CHALLENGES = STANDAARD_CHALLENGES.map(c => ({ ...c }));
+      await sb.from('challenges').upsert(CHALLENGES, { onConflict: 'id' });
+    }
+  } catch(e) {
+    console.warn('Challenges-tabel niet beschikbaar, gebruik standaardlijst:', e?.message);
+    CHALLENGES = STANDAARD_CHALLENGES.map(c => ({ ...c }));
+  }
+}
+
+// Nieuwe challenge toevoegen (naam + prijs) → direct naar Supabase
+function voegChallengeToe() {
+  const naamEl  = document.getElementById('nieuwe-chall-naam');
+  const prijsEl = document.getElementById('nieuwe-chall-prijs');
+  const melEl   = document.getElementById('chall-beheer-mel');
+  const naam    = (naamEl?.value || '').trim();
+  const prijs   = parseer(prijsEl?.value);
+  melEl.innerHTML = '';
+
+  if (!naam)                        { melEl.innerHTML = '<div class="mel mel-err">Vul een naam in.</div>'; return; }
+  if (isNaN(prijs) || prijs <= 0)   { melEl.innerHTML = '<div class="mel mel-err">Vul een geldige prijs in.</div>'; return; }
+
+  const nieuw = { id: uid(), naam, prijs: Math.round(prijs * 100) / 100 };
+  CHALLENGES.push(nieuw);
+  CHALLENGES.sort((a, b) => a.prijs - b.prijs);
+  recentOpslagTijd = Date.now();
+  Promise.resolve(sb.from('challenges').upsert(nieuw, { onConflict: 'id' }))
+    .catch(err => toonFout('Toevoegen mislukt: ' + (err?.message || err?.code || '')));
+
+  naamEl.value = ''; prijsEl.value = '';
+  renderChallenges();
+}
+
+// Challenge verwijderen (raakt bestaande aankopen niet — die bewaren naam+prijs)
+function verwijderChallenge(id) {
+  const c = CHALLENGES.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`Challenge "${c.naam}" verwijderen uit de lijst?`)) return;
+  CHALLENGES = CHALLENGES.filter(x => x.id !== id);
+  recentOpslagTijd = Date.now();
+  Promise.resolve(sb.from('challenges').delete().eq('id', id))
+    .catch(err => toonFout('Verwijderen mislukt: ' + (err?.message || err?.code || '')));
+  renderChallenges();
+}
+
+// Prijs van een bestaande challenge aanpassen
+function wijzigChallengePrijs(id) {
+  const c = CHALLENGES.find(x => x.id === id);
+  if (!c) return;
+  const inv = prompt(`Nieuwe prijs voor "${c.naam}" (in €):`, c.prijs);
+  if (inv === null) return;                    // geannuleerd
+  const prijs = parseer(inv);
+  if (isNaN(prijs) || prijs <= 0) { toonFout('Ongeldige prijs.'); return; }
+
+  c.prijs = Math.round(prijs * 100) / 100;
+  CHALLENGES.sort((a, b) => a.prijs - b.prijs);
+  recentOpslagTijd = Date.now();
+  Promise.resolve(sb.from('challenges').upsert({ id: c.id, naam: c.naam, prijs: c.prijs }, { onConflict: 'id' }))
+    .catch(err => toonFout('Aanpassen mislukt: ' + (err?.message || err?.code || '')));
+  renderChallenges();
 }
 
 function renderChallenges() {
@@ -1398,19 +1655,25 @@ function renderChallenges() {
 
   pool.forEach(sp => {
     const s = berekenSaldo(sp);
-    if (s > 0.005)
-      koperSel.innerHTML += `<option value="${sp.id}"${sp.id === wasKoper ? ' selected' : ''}>${esc(sp.naam)} (${saldoStr(s)})</option>`;
-    ontvSel.innerHTML += `<option value="${sp.id}"${sp.id === wasOntv ? ' selected' : ''}>${esc(sp.naam)}</option>`;
+    koperSel.innerHTML += `<option value="${sp.id}"${sp.id === wasKoper ? ' selected' : ''}>${esc(sp.naam)} (${saldoStr(s)})</option>`;
+    ontvSel.innerHTML  += `<option value="${sp.id}"${sp.id === wasOntv ? ' selected' : ''}>${esc(sp.naam)}</option>`;
   });
 
   updateChallDropdown();
 
-  // Catalogus
+  // Catalogus (met wijzig-/verwijderknoppen per challenge)
   const catEl   = document.getElementById('ch-catalogus');
   const prijzen = [...new Set(CHALLENGES.map(c => c.prijs))].sort((a,b) => a - b);
   catEl.innerHTML = prijzen.map(prijs => {
     const items = CHALLENGES.filter(c => c.prijs === prijs)
-      .map(c => `<div class="chal-item">${esc(c.naam)}</div>`).join('');
+      .map(c => `
+        <div class="chal-item">
+          <span class="chal-naam">${esc(c.naam)}</span>
+          <span class="chal-acties">
+            <button class="chal-btn" onclick="wijzigChallengePrijs('${c.id}')" title="Prijs aanpassen">&#9998;</button>
+            <button class="chal-btn" onclick="verwijderChallenge('${c.id}')" title="Verwijderen">&#10005;</button>
+          </span>
+        </div>`).join('');
     return `<div class="tier-hdr"><span class="tier-prijs">${eur(prijs)}</span><span class="tier-lijn"></span></div>${items}`;
   }).join('');
 
@@ -1424,27 +1687,35 @@ function renderChallenges() {
   histEl.innerHTML = alleAankopen.map(c => {
     const kNaam = esc(data.spelers.find(s => s.id === c.koperId)?.naam    ?? '(verwijderd)');
     const oNaam = esc(data.spelers.find(s => s.id === c.ontvangerId)?.naam ?? '(verwijderd)');
+    const challSpan = `<span style="color:var(--acc);">'${esc(c.challNaam)}'</span>`;
+    // Gekocht (groen): koper betaalt, ontvanger krijgt.
+    // Geweigerd (rood): ontvanger weigerde → ontvanger betaalt, koper krijgt.
+    const tekst = c.geweigerd
+      ? `<strong>${oNaam}</strong> weigerde ${challSpan} → betaalt aan <strong>${kNaam}</strong>`
+      : `<strong>${kNaam}</strong> kocht ${challSpan} voor <strong>${oNaam}</strong>`;
+    const badge = c.geweigerd
+      ? '<span style="color:var(--rood);font-weight:700;">GEWEIGERD</span>'
+      : '<span style="color:var(--groen);font-weight:700;">GEKOCHT</span>';
     return `
-      <div class="hist-rij">
+      <div class="hist-rij ${c.geweigerd ? 'geweigerd' : 'gekocht'}">
         <div style="flex:1;">
-          <strong>${kNaam}</strong> kocht
-          <span style="color:var(--acc);">'${esc(c.challNaam)}'</span>
-          voor <strong>${oNaam}</strong>
-          <span style="display:block;font-size:12px;color:var(--zacht);margin-top:2px;">
-            ${c.tijd} &middot; ${eur(c.prijs)} &middot; ${esc(c.sessieNaam)}
+          ${tekst}
+          <span style="display:block;font-size:12px;color:var(--zacht);margin-top:3px;">
+            ${badge} &middot; ${c.tijd} &middot; ${eur(c.prijs)} &middot; ${esc(c.sessieNaam)}
           </span>
         </div>
-        <button class="x-btn" onclick="verwijderChallengeAankoop('${c.id}')" title="Verwijder">&#10005;</button>
+        <button class="x-btn" onclick="verwijderChallengeAankoop('${c.id}')" title="Ongedaan maken">&#10005;</button>
       </div>`;
   }).join('');
 }
 
 function koopChallenge() {
-  const sessie   = activeSessie();
-  const koperId  = document.getElementById('ch-koper')?.value;
-  const ontvId   = document.getElementById('ch-ontv')?.value;
-  const challRaw = document.getElementById('ch-keuze')?.value;
-  const melEl    = document.getElementById('ch-mel');
+  const sessie    = activeSessie();
+  const koperId   = document.getElementById('ch-koper')?.value;
+  const ontvId    = document.getElementById('ch-ontv')?.value;
+  const challRaw  = document.getElementById('ch-keuze')?.value;
+  const geweigerd = document.getElementById('ch-geweigerd')?.checked || false;
+  const melEl     = document.getElementById('ch-mel');
   melEl.innerHTML = '';
 
   if (!koperId || !ontvId || !challRaw) {
@@ -1455,12 +1726,6 @@ function koopChallenge() {
   }
 
   const chall = JSON.parse(challRaw);
-  const koper = data.spelers.find(s => s.id === koperId);
-  const saldo = berekenSaldo(koper);
-
-  if (saldo < chall.prijs - 0.005) {
-    melEl.innerHTML = `<div class="mel mel-err">${esc(koper.naam)} heeft te weinig saldo (${eur(saldo)}).</div>`; return;
-  }
 
   // Met actieve sessie → daarin boeken. Anders → in de losse-challenges-sessie.
   const doelSessie = sessie || getOfMaakLosseSessie();
@@ -1469,8 +1734,16 @@ function koopChallenge() {
   if (!doelSessie.deelnemers.includes(ontvId))  doelSessie.deelnemers.push(ontvId);
 
   const tijd = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-  doelSessie.challengeAankopen.unshift({ id: uid(), koperId, ontvangerId: ontvId, challNaam: chall.naam, prijs: chall.prijs, tijd });
+  doelSessie.challengeAankopen.unshift({
+    id: uid(), koperId, ontvangerId: ontvId,
+    challNaam: chall.naam, prijs: chall.prijs, tijd, geweigerd
+  });
   saveData();
+
+  // Checkbox resetten voor de volgende registratie
+  const chk = document.getElementById('ch-geweigerd');
+  if (chk) chk.checked = false;
+
   renderChallenges();
   renderLeaderboard();
 }
@@ -1631,12 +1904,132 @@ function renderLeaderboard() {
       ? `<div class="lb-pos goud">&#9733;</div>`
       : `<div class="lb-pos">${i + 1}</div>`;
     return `
-      <div class="lb-rij">
+      <div class="lb-rij" onclick="toonSpelerDetail('${sp.id}')">
         ${posEl}
         <span class="lb-naam">${esc(sp.naam)}</span>
         <span class="lb-bedrag ${saldoKls(sp.saldo)}">${saldoStr(sp.saldo)}</span>
+        <span class="lb-chevron">&#8250;</span>
       </div>`;
   }).join('');
+}
+
+// ─ Spelerstatistieken: saldoverloop-grafiek + resultaat per sessie ─
+
+function toonSpelerDetail(spId) {
+  const sp = data.spelers.find(s => s.id === spId);
+  if (!sp) return;
+
+  // Alleen echte pokersessies (de verborgen 'losse'-sessie tonen we niet apart).
+  const sessies = data.sessies
+    .filter(s => s.deelnemers.includes(sp.id) && s.status !== 'losse')
+    .slice()
+    .sort((a, b) => new Date(a.datum) - new Date(b.datum));
+
+  // Effect van losse challenges vouwen we in de startwaarde, zodat de grafiek
+  // netjes bij het startsaldo begint én op exact het leaderboard-saldo eindigt.
+  const losseEffect = data.sessies
+    .filter(s => s.deelnemers.includes(sp.id) && s.status === 'losse')
+    .reduce((t, s) => t + berekenSessieResult(s, sp), 0);
+
+  // Cumulatief saldoverloop: startsaldo + elk sessieresultaat
+  let loop = sp.start + losseEffect;
+  const punten    = [{ naam: 'Start', saldo: loop }];
+  const perSessie = [];
+  sessies.forEach(s => {
+    const r = berekenSessieResult(s, sp);
+    loop += r;
+    punten.push({ naam: s.naam, saldo: loop });
+    perSessie.push({ sessie: s, resultaat: r, saldoNa: loop });
+  });
+
+  const huidig  = berekenSaldo(sp);   // gelijk aan loop
+  const grafiek = punten.length > 1
+    ? maakSaldoGrafiek(punten)
+    : '<div class="leeg" style="padding:16px 0;text-align:center;">Nog geen sessies gespeeld.</div>';
+
+  // Lijst: nieuwste sessie bovenaan
+  const lijst = perSessie.length
+    ? perSessie.slice().reverse().map(p => `
+        <div class="det-rij">
+          <div>
+            <div class="det-naam">${esc(p.sessie.naam)}</div>
+            <div class="det-datum">${datumStr(p.sessie.datum)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="lb-bedrag ${saldoKls(p.resultaat)}" style="font-size:15px;">${saldoStr(p.resultaat)}</div>
+            <div class="det-datum">saldo: ${eur(p.saldoNa)}</div>
+          </div>
+        </div>`).join('')
+    : '<div class="leeg" style="padding:12px 0;text-align:center;">Nog geen sessies gespeeld.</div>';
+
+  document.getElementById('speler-detail').innerHTML = `
+    <h3 style="margin-bottom:2px;">${esc(sp.naam)}</h3>
+    <div class="lb-bedrag ${saldoKls(huidig)}" style="font-size:24px;margin-bottom:18px;">${saldoStr(huidig)}</div>
+    <div class="k-titel">Saldoverloop</div>
+    <div class="grafiek-wrap">${grafiek}</div>
+    <div class="k-titel">Resultaat per sessie</div>
+    ${lijst}`;
+
+  document.getElementById('speler-modal').classList.add('aan');
+}
+
+function sluitSpelerModal() {
+  document.getElementById('speler-modal').classList.remove('aan');
+}
+
+// Bouwt een inline-SVG lijndiagram van het cumulatieve saldoverloop.
+// Vaste hex-kleuren (var(--..) werkt niet in SVG-presentatie-attributen).
+function maakSaldoGrafiek(punten) {
+  const ACC = '#5B9BFF', GROEN = '#34D399', ROOD = '#F87171', ZACHT = '#9AA3B2', RAND = '#252e42';
+  const W = 300, H = 170, padL = 42, padR = 12, padT = 14, padB = 24;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+
+  const saldos = punten.map(p => p.saldo);
+  let min = Math.min(...saldos, 0);
+  let max = Math.max(...saldos, 0);
+  if (min === max) { min -= 1; max += 1; }
+  const marge = (max - min) * 0.08;
+  min -= marge; max += marge;
+  const spanY = max - min;
+
+  const x = i => padL + (punten.length === 1 ? innerW / 2 : (i / (punten.length - 1)) * innerW);
+  const y = v => padT + (1 - (v - min) / spanY) * innerH;
+  const kort = v => (v < 0 ? '−' : '') + '€' + Math.round(Math.abs(v));
+
+  // Nullijn (break-even) — 0 valt altijd binnen bereik
+  const zeroY = y(0);
+  const zeroLijn =
+    `<line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${W - padR}" y2="${zeroY.toFixed(1)}"
+           stroke="${ZACHT}" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+     <text x="${padL - 6}" y="${(zeroY + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="${ZACHT}">€0</text>`;
+
+  const yLabels =
+    `<text x="${padL - 6}" y="${(y(max) + 8).toFixed(1)}" text-anchor="end" font-size="9" fill="${ZACHT}">${kort(max)}</text>
+     <text x="${padL - 6}" y="${(y(min)).toFixed(1)}"     text-anchor="end" font-size="9" fill="${ZACHT}">${kort(min)}</text>`;
+
+  const coords   = punten.map((p, i) => `${x(i).toFixed(1)},${y(p.saldo).toFixed(1)}`);
+  const linePath = 'M' + coords.join(' L');
+  const areaPath = `M${x(0).toFixed(1)},${zeroY.toFixed(1)} `
+    + punten.map((p, i) => `L${x(i).toFixed(1)},${y(p.saldo).toFixed(1)}`).join(' ')
+    + ` L${x(punten.length - 1).toFixed(1)},${zeroY.toFixed(1)} Z`;
+
+  const dots = punten.map((p, i) => {
+    const kleur = p.saldo > 0.005 ? GROEN : p.saldo < -0.005 ? ROOD : ZACHT;
+    return `<circle cx="${x(i).toFixed(1)}" cy="${y(p.saldo).toFixed(1)}" r="2.6" fill="${kleur}"/>`;
+  }).join('');
+
+  const xLabels =
+    `<text x="${x(0).toFixed(1)}" y="${H - 7}" text-anchor="start" font-size="9" fill="${ZACHT}">Start</text>
+     <text x="${(W - padR).toFixed(1)}" y="${H - 7}" text-anchor="end" font-size="9" fill="${ZACHT}">nu</text>`;
+
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Saldoverloop">
+    ${zeroLijn}
+    ${yLabels}
+    <path d="${areaPath}" fill="${ACC}" opacity="0.08"/>
+    <path d="${linePath}" fill="none" stroke="${ACC}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
+    ${xLabels}
+  </svg>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1656,21 +2049,6 @@ function navigeer(pagina) {
   try { localStorage.setItem('pokersaldo_pagina', pagina); } catch(e) {}
 }
 
-function vraagReset()  { document.getElementById('reset-modal').classList.add('aan'); }
-function sluitModal()  { document.getElementById('reset-modal').classList.remove('aan'); }
-
-function resetAlles() {
-  maakStandaard();
-  sluitModal();
-  spelTab = 'inkopen';
-  toonNieuwForm = false;
-  navigeer('spel');
-  // Verwijder alle sessies uit de database, sla dan de nieuwe standaard op
-  recentOpslagTijd = Date.now();
-  sb.from('sessies').delete().neq('id', '')
-    .then(() => saveData())
-    .catch(() => toonFout('Reset mislukt — probeer opnieuw.'));
-}
 
 // ═══════════════════════════════════════════════════════════
 // INITIALISATIE
