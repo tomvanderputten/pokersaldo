@@ -341,6 +341,17 @@
       -webkit-backdrop-filter: none; backdrop-filter: none;
     }
 
+    /* Balans-balk: groen als €0 klopt, rood als de balans scheef staat */
+    .balans-balk {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 14px; margin-bottom: 12px;
+      border-radius: 12px; font-size: 13px; font-weight: 700;
+      border: 1px solid;
+    }
+    .balans-balk.ok   { background: var(--groen-bg); border-color: rgba(52,211,153,.4);  color: var(--groen); }
+    .balans-balk.fout { background: var(--rood-bg);  border-color: rgba(248,113,113,.45); color: var(--rood); }
+    .balans-bedrag { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+
     /* ── Speler-detail: grafiek + resultaat per sessie ── */
     .grafiek-wrap {
       background: linear-gradient(180deg, rgba(46,107,255,.08), rgba(255,255,255,.03));
@@ -855,18 +866,19 @@ let recentOpslagTijd = 0;
 // CONSTANTEN
 // ═══════════════════════════════════════════════════════════
 
-// Vaste IDs zodat twee apparaten nooit dubbele rijen in Supabase aanmaken
+// Vaste IDs zodat twee apparaten nooit dubbele rijen in Supabase aanmaken.
+// Startsaldo's gecorrigeerd zodat het leaderboard op €0 uitkomt (aug 2026).
 const STANDAARD_SPELERS = [
-  { id: 'sp-tobias',  naam: 'Tobias',  start:  52.86 },
-  { id: 'sp-sebas',   naam: 'Sebas',   start:  41.57 },
-  { id: 'sp-tom',     naam: 'Tom',     start:  21.17 },
-  { id: 'sp-dees',    naam: 'Dees',    start:  18.00 },
-  { id: 'sp-joris',   naam: 'Joris',   start:   8.39 },
-  { id: 'sp-ghost',   naam: 'Ghost',   start:   0.63 },
-  { id: 'sp-faye',    naam: 'Faye',    start:  -4.27 },
-  { id: 'sp-tijn',    naam: 'Tijn',    start: -10.00 },
-  { id: 'sp-reinier', naam: 'Reinier', start: -13.87 },
-  { id: 'sp-morris',  naam: 'Morris',  start: -102.43 },
+  { id: 'sp-tobias',  naam: 'Tobias',  start:   51.65 },
+  { id: 'sp-sebas',   naam: 'Sebas',   start:   40.36 },
+  { id: 'sp-tom',     naam: 'Tom',     start:   14.97 },
+  { id: 'sp-dees',    naam: 'Dees',    start:   16.79 },
+  { id: 'sp-joris',   naam: 'Joris',   start:    7.18 },
+  { id: 'sp-ghost',   naam: 'Ghost',   start:   -0.57 },
+  { id: 'sp-faye',    naam: 'Faye',    start:   -5.47 },
+  { id: 'sp-tijn',    naam: 'Tijn',    start:  -11.20 },
+  { id: 'sp-reinier', naam: 'Reinier', start:  -20.08 },
+  { id: 'sp-morris',  naam: 'Morris',  start: -103.63 },
 ];
 
 // Standaard-challenges met vaste IDs (ch-0, ch-1, ...) zodat twee apparaten
@@ -1903,15 +1915,20 @@ function verwijderChallenge(id) {
   renderChallenges();
 }
 
-// Prijs van een bestaande challenge aanpassen
-function wijzigChallengePrijs(id) {
+// Naam én prijs van een bestaande challenge aanpassen
+function wijzigChallenge(id) {
   const c = CHALLENGES.find(x => x.id === id);
   if (!c) return;
-  const inv = prompt(`Nieuwe prijs voor "${c.naam}" (in €):`, c.prijs);
-  if (inv === null) return;                    // geannuleerd
+  const nieuweNaam = prompt('Naam van de challenge:', c.naam);
+  if (nieuweNaam === null) return;               // geannuleerd
+  const naam = nieuweNaam.trim();
+  if (!naam) { toonFout('De naam mag niet leeg zijn.'); return; }
+  const inv = prompt(`Prijs voor "${naam}" (in €):`, c.prijs);
+  if (inv === null) return;                      // geannuleerd
   const prijs = parseer(inv);
   if (isNaN(prijs) || prijs <= 0) { toonFout('Ongeldige prijs.'); return; }
 
+  c.naam  = naam;
   c.prijs = Math.round(prijs * 100) / 100;
   CHALLENGES.sort((a, b) => a.prijs - b.prijs);
   recentOpslagTijd = Date.now();
@@ -1956,7 +1973,7 @@ function renderChallenges() {
         <div class="chal-item">
           <span class="chal-naam">${esc(c.naam)}</span>
           <span class="chal-acties">
-            <button class="chal-btn" onclick="wijzigChallengePrijs('${c.id}')" title="Prijs aanpassen">&#9998;</button>
+            <button class="chal-btn" onclick="wijzigChallenge('${c.id}')" title="Naam &amp; prijs aanpassen">&#9998;</button>
             <button class="chal-btn" onclick="verwijderChallenge('${c.id}')" title="Verwijderen">&#10005;</button>
           </span>
         </div>`).join('');
@@ -2084,8 +2101,18 @@ function toonSluitSessieModal() {
     ? `<div class="mel mel-warn" style="margin-bottom:14px;">&#9888; Niet alle spelers hebben uitgecast.</div>`
     : '';
 
+  // Balans van de sessie: hoort €0 te zijn (evenveel uitgecasht als ingekocht).
+  const balans = resultaten.reduce((s, x) => s + x.r, 0);
+  const balansKlopt = Math.abs(balans) < 0.005;
+  const balansHTML = `
+    <div class="balans-balk ${balansKlopt ? 'ok' : 'fout'}" style="margin-bottom:14px;">
+      <span>${balansKlopt ? '&#10003; Balans klopt' : '&#9888; Balans klopt niet — controleer inkopen/uitcashes'}</span>
+      <span class="balans-bedrag">${eur(balans)}</span>
+    </div>`;
+
   document.getElementById('verrekening-inhoud').innerHTML = `
     ${waarschHTML}
+    ${balansHTML}
     <div class="sub-lbl">Resultaten deze sessie</div>
     ${resHTML}
     <div class="sub-lbl" style="margin-top:16px;">Verrekeningen</div>
@@ -2160,6 +2187,15 @@ function renderSessies() {
       ? '<span class="badge badge-actief">Actief</span>'
       : '<span class="badge badge-klaar">Verrekend</span>';
 
+    // Balans van de sessie (hoort €0 te zijn)
+    const balans = resultaten.reduce((s, x) => s + x.r, 0);
+    const balansKlopt = Math.abs(balans) < 0.005;
+    const balansHTML = `
+      <div class="balans-balk ${balansKlopt ? 'ok' : 'fout'}" style="margin-top:10px;font-size:12px;">
+        <span>${balansKlopt ? '&#10003; Balans klopt' : '&#9888; Balans klopt niet'}</span>
+        <span class="balans-bedrag">${eur(balans)}</span>
+      </div>`;
+
     return `
       <div class="sessie-kaart">
         <div class="sessie-kaart-kop" style="margin-bottom:10px;">
@@ -2177,6 +2213,7 @@ function renderSessies() {
         </div>
         ${resHTML}
         ${verrHTML}
+        ${balansHTML}
       </div>`;
   }).join('');
 }
@@ -2193,7 +2230,16 @@ function renderLeaderboard() {
     .map(sp => ({ ...sp, saldo: berekenSaldo(sp) }))
     .sort((a, b) => b.saldo - a.saldo);
 
-  el.innerHTML = gesorteerd.map((sp, i) => {
+  // Totale balans: hoort altijd €0 te zijn (poker is een nulsomspel).
+  const totaal = gesorteerd.reduce((s, sp) => s + sp.saldo, 0);
+  const klopt  = Math.abs(totaal) < 0.005;
+  const balansHTML = `
+    <div class="balans-balk ${klopt ? 'ok' : 'fout'}">
+      <span>${klopt ? '&#10003; Balans klopt' : '&#9888; Balans klopt niet'}</span>
+      <span class="balans-bedrag">${eur(totaal)}</span>
+    </div>`;
+
+  const rijenHTML = gesorteerd.map((sp, i) => {
     const posEl = i === 0
       ? `<div class="lb-pos goud">&#9733;</div>`
       : `<div class="lb-pos">${i + 1}</div>`;
@@ -2205,6 +2251,8 @@ function renderLeaderboard() {
         <span class="lb-chevron">&#8250;</span>
       </div>`;
   }).join('');
+
+  el.innerHTML = balansHTML + rijenHTML;
 }
 
 // ─ Spelerstatistieken: saldoverloop-grafiek + resultaat per sessie ─
