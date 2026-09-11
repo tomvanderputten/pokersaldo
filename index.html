@@ -359,6 +359,12 @@
       border-radius: 16px; padding: 14px 10px 6px; margin-bottom: 18px;
     }
     .grafiek-wrap svg { width: 100%; height: auto; display: block; }
+    .grafiek-legenda {
+      display: flex; gap: 18px; justify-content: center;
+      margin: -8px 0 16px; font-size: 12px; color: var(--zacht);
+    }
+    .grafiek-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+    .grafiek-legenda i { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
     .det-rij {
       display: flex; align-items: center; justify-content: space-between;
       gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--rand);
@@ -798,6 +804,23 @@
     <div id="speler-detail"></div>
     <div class="modal-btns" style="margin-top:18px;">
       <button class="btn btn-grijs btn-vol" onclick="sluitSpelerModal()">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<!-- Balans rechttrekken modal -->
+<div class="modal-bg" id="balans-modal" onclick="if(event.target===this)sluitBalansModal()">
+  <div class="modal" style="max-height:88vh;overflow-y:auto;padding-bottom:40px;">
+    <h3 style="margin-bottom:6px;">Balans rechttrekken</h3>
+    <p id="balans-uitleg"></p>
+    <div class="sub-lbl">Verdeel over deze spelers</div>
+    <div class="deeln-grid" id="balans-grid"></div>
+    <div class="sub-lbl" style="margin-top:6px;">Dit gebeurt er (per speler)</div>
+    <div id="balans-preview"></div>
+    <div id="balans-mel"></div>
+    <div class="modal-btns" style="margin-top:18px;">
+      <button class="btn btn-grijs" onclick="sluitBalansModal()">Annuleer</button>
+      <button class="btn btn-acc" onclick="pasBalansAan()">Rechttrekken</button>
     </div>
   </div>
 </div>
@@ -2237,7 +2260,8 @@ function renderLeaderboard() {
     <div class="balans-balk ${klopt ? 'ok' : 'fout'}">
       <span>${klopt ? '&#10003; Balans klopt' : '&#9888; Balans klopt niet'}</span>
       <span class="balans-bedrag">${eur(totaal)}</span>
-    </div>`;
+    </div>
+    ${klopt ? '' : `<button class="btn btn-acc btn-vol" style="margin-bottom:14px;" onclick="openBalansModal()">Balans rechttrekken</button>`}`;
 
   const rijenHTML = gesorteerd.map((sp, i) => {
     const posEl = i === 0
@@ -2255,39 +2279,128 @@ function renderLeaderboard() {
   el.innerHTML = balansHTML + rijenHTML;
 }
 
+// ─ Balans rechttrekken: verdeel het verschil over gekozen spelers ─
+
+// Bereken per gekozen speler hoeveel erbij/eraf gaat om op €0 uit te komen.
+// Het verschil wordt in hele centen verdeeld zodat het totaal exact 0 wordt.
+function berekenBalansPlan(ids) {
+  const totaal = data.spelers.reduce((s, sp) => s + berekenSaldo(sp), 0);
+  const cents  = Math.round(totaal * 100);   // positief = moet eraf
+  const N = ids.length;
+  if (!N) return { totaal, plan: [] };
+  const base = Math.trunc(cents / N);
+  let rem = cents - base * N;                 // rest-centen (zelfde teken als cents)
+  const step = rem > 0 ? 1 : -1;
+  const shares = new Array(N).fill(base);
+  for (let i = 0; i < Math.abs(rem); i++) shares[i] += step;
+  const plan = ids.map((id, i) => {
+    const sp = data.spelers.find(x => x.id === id);
+    const huidig = berekenSaldo(sp);
+    const aanpassing = -shares[i] / 100;      // wat erbij (+) of eraf (−) gaat
+    return { id, naam: sp.naam, huidig, aanpassing, nieuw: Math.round((huidig + aanpassing) * 100) / 100 };
+  });
+  return { totaal, plan };
+}
+
+function openBalansModal() {
+  const totaal = data.spelers.reduce((s, sp) => s + berekenSaldo(sp), 0);
+  document.getElementById('balans-uitleg').innerHTML =
+    `De totale balans staat op <strong>${eur(totaal)}</strong> (moet €0 zijn). Kies over welke spelers je dit verdeelt.`;
+  // Checkboxes: standaard iedereen aangevinkt
+  document.getElementById('balans-grid').innerHTML = data.spelers.map(sp => `
+    <label class="deeln-label">
+      <input type="checkbox" class="balans-chk" value="${sp.id}" checked onchange="updateBalansPreview()">
+      <span>${esc(sp.naam)}</span>
+    </label>`).join('');
+  document.getElementById('balans-mel').innerHTML = '';
+  updateBalansPreview();
+  document.getElementById('balans-modal').classList.add('aan');
+}
+
+function sluitBalansModal() { document.getElementById('balans-modal').classList.remove('aan'); }
+
+// Live voorbeeld: toont per gekozen speler hoeveel erbij/eraf gaat.
+function updateBalansPreview() {
+  const ids = [...document.querySelectorAll('.balans-chk:checked')].map(c => c.value);
+  const prev = document.getElementById('balans-preview');
+  if (!ids.length) { prev.innerHTML = '<div class="leeg" style="padding:10px 0;">Kies minstens één speler.</div>'; return; }
+  const { plan } = berekenBalansPlan(ids);
+  prev.innerHTML = plan.map(p => `
+    <div class="verr-rij" style="font-size:14px;">
+      <span>${esc(p.naam)}</span>
+      <span style="display:flex;align-items:center;gap:8px;">
+        <span class="${saldoKls(p.aanpassing)}" style="font-weight:700;">${saldoStr(p.aanpassing)}</span>
+        <span style="color:var(--zacht);font-size:12px;">&#8594; ${eur(p.nieuw)}</span>
+      </span>
+    </div>`).join('');
+}
+
+// Pas de verdeling toe: startsaldo's aanpassen → leaderboard wordt €0.
+function pasBalansAan() {
+  const ids = [...document.querySelectorAll('.balans-chk:checked')].map(c => c.value);
+  if (!ids.length) {
+    document.getElementById('balans-mel').innerHTML = '<div class="mel mel-err">Kies minstens één speler.</div>'; return;
+  }
+  const { plan } = berekenBalansPlan(ids);
+  plan.forEach(p => {
+    const sp = data.spelers.find(x => x.id === p.id);
+    sp.start = Math.round((sp.start + p.aanpassing) * 100) / 100;
+  });
+  saveData();               // schrijft alle (gewijzigde) startsaldo's naar Supabase
+  sluitBalansModal();
+  renderAlles();
+}
+
 // ─ Spelerstatistieken: saldoverloop-grafiek + resultaat per sessie ─
 
 function toonSpelerDetail(spId) {
   const sp = data.spelers.find(s => s.id === spId);
   if (!sp) return;
 
-  // Alleen echte pokersessies (de verborgen 'losse'-sessie tonen we niet apart).
+  // Alle sessies waar de speler aan meedeed, chronologisch (incl. losse challenges).
   const sessies = data.sessies
-    .filter(s => s.deelnemers.includes(sp.id) && s.status !== 'losse')
+    .filter(s => s.deelnemers.includes(sp.id))
     .slice()
     .sort((a, b) => new Date(a.datum) - new Date(b.datum));
 
-  // Effect van losse challenges vouwen we in de startwaarde, zodat de grafiek
-  // netjes bij het startsaldo begint én op exact het leaderboard-saldo eindigt.
-  const losseEffect = data.sessies
-    .filter(s => s.deelnemers.includes(sp.id) && s.status === 'losse')
-    .reduce((t, s) => t + berekenSessieResult(s, sp), 0);
-
-  // Cumulatief saldoverloop: startsaldo + elk sessieresultaat
-  let loop = sp.start + losseEffect;
-  const punten    = [{ naam: 'Start', saldo: loop }];
+  // Tijdlijn opbouwen: elk punt is een 'spel'- of 'challenge'-gebeurtenis.
+  // Zo krijgt elke gekochte/gekregen challenge een eigen (paars) segment.
+  let loop = sp.start;
+  const punten    = [{ saldo: loop, type: 'start' }];
   const perSessie = [];
   sessies.forEach(s => {
-    const r = berekenSessieResult(s, sp);
-    loop += r;
-    punten.push({ naam: s.naam, saldo: loop });
-    perSessie.push({ sessie: s, resultaat: r, saldoNa: loop });
+    // Challenges van deze speler in deze sessie (op tijd) → elk een paars punt
+    const challs = s.challengeAankopen
+      .filter(c => c.koperId === sp.id || c.ontvangerId === sp.id)
+      .slice()
+      .sort((a, b) => String(a.tijd || '').localeCompare(String(b.tijd || '')));
+    challs.forEach(c => {
+      const teken = c.geweigerd ? -1 : 1;
+      let d = 0;
+      if (c.koperId     === sp.id) d += -c.prijs * teken;
+      if (c.ontvangerId === sp.id) d +=  c.prijs * teken;
+      loop += d;
+      punten.push({ saldo: loop, type: 'challenge' });
+    });
+    // Spel-resultaat (uitcash − inkoop), alleen bij echte sessies → blauw punt
+    if (s.status !== 'losse') {
+      const inkoop = s.inkopen.filter(i => i.spelerId === sp.id).reduce((t, i) => t + i.bedrag, 0);
+      const uitE   = s.uitcashes.find(u => u.spelerId === sp.id);
+      loop += (uitE ? uitE.bedrag : 0) - inkoop;
+      punten.push({ saldo: loop, type: 'game' });
+      perSessie.push({ sessie: s, resultaat: berekenSessieResult(s, sp), saldoNa: loop });
+    }
   });
 
   const huidig  = berekenSaldo(sp);   // gelijk aan loop
   const grafiek = punten.length > 1
     ? maakSaldoGrafiek(punten)
     : '<div class="leeg" style="padding:16px 0;text-align:center;">Nog geen sessies gespeeld.</div>';
+  const legenda = punten.length > 1 ? `
+    <div class="grafiek-legenda">
+      <span><i style="background:#5B9BFF"></i>Spel</span>
+      <span><i style="background:#A855F7"></i>Challenge</span>
+    </div>` : '';
 
   // Lijst: nieuwste sessie bovenaan
   const lijst = perSessie.length
@@ -2309,6 +2422,7 @@ function toonSpelerDetail(spId) {
     <div class="lb-bedrag ${saldoKls(huidig)}" style="font-size:24px;margin-bottom:18px;">${saldoStr(huidig)}</div>
     <div class="k-titel">Saldoverloop</div>
     <div class="grafiek-wrap">${grafiek}</div>
+    ${legenda}
     <div class="k-titel">Resultaat per sessie</div>
     ${lijst}`;
 
@@ -2320,9 +2434,10 @@ function sluitSpelerModal() {
 }
 
 // Bouwt een inline-SVG lijndiagram van het cumulatieve saldoverloop.
+// Elk segment is gekleurd: blauw = spel-resultaat, paars = challenge.
 // Vaste hex-kleuren (var(--..) werkt niet in SVG-presentatie-attributen).
 function maakSaldoGrafiek(punten) {
-  const ACC = '#5B9BFF', GROEN = '#34D399', ROOD = '#F87171', ZACHT = '#9AA3B2', RAND = '#252e42';
+  const BLAUW = '#5B9BFF', PAARS = '#A855F7', GROEN = '#34D399', ROOD = '#F87171', ZACHT = '#9AA3B2';
   const W = 300, H = 170, padL = 42, padR = 12, padT = 14, padB = 24;
   const innerW = W - padL - padR, innerH = H - padT - padB;
 
@@ -2349,15 +2464,16 @@ function maakSaldoGrafiek(punten) {
     `<text x="${padL - 6}" y="${(y(max) + 8).toFixed(1)}" text-anchor="end" font-size="9" fill="${ZACHT}">${kort(max)}</text>
      <text x="${padL - 6}" y="${(y(min)).toFixed(1)}"     text-anchor="end" font-size="9" fill="${ZACHT}">${kort(min)}</text>`;
 
-  const coords   = punten.map((p, i) => `${x(i).toFixed(1)},${y(p.saldo).toFixed(1)}`);
-  const linePath = 'M' + coords.join(' L');
-  const areaPath = `M${x(0).toFixed(1)},${zeroY.toFixed(1)} `
-    + punten.map((p, i) => `L${x(i).toFixed(1)},${y(p.saldo).toFixed(1)}`).join(' ')
-    + ` L${x(punten.length - 1).toFixed(1)},${zeroY.toFixed(1)} Z`;
+  // Segmenten los tekenen zodat challenge-stappen (paars) opvallen tussen de spellen (blauw)
+  let segs = '';
+  for (let i = 1; i < punten.length; i++) {
+    const kleur = punten[i].type === 'challenge' ? PAARS : BLAUW;
+    segs += `<line x1="${x(i-1).toFixed(1)}" y1="${y(punten[i-1].saldo).toFixed(1)}" x2="${x(i).toFixed(1)}" y2="${y(punten[i].saldo).toFixed(1)}" stroke="${kleur}" stroke-width="2.2" stroke-linecap="round"/>`;
+  }
 
   const dots = punten.map((p, i) => {
     const kleur = p.saldo > 0.005 ? GROEN : p.saldo < -0.005 ? ROOD : ZACHT;
-    return `<circle cx="${x(i).toFixed(1)}" cy="${y(p.saldo).toFixed(1)}" r="2.6" fill="${kleur}"/>`;
+    return `<circle cx="${x(i).toFixed(1)}" cy="${y(p.saldo).toFixed(1)}" r="2.4" fill="${kleur}"/>`;
   }).join('');
 
   const xLabels =
@@ -2367,8 +2483,7 @@ function maakSaldoGrafiek(punten) {
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Saldoverloop">
     ${zeroLijn}
     ${yLabels}
-    <path d="${areaPath}" fill="${ACC}" opacity="0.08"/>
-    <path d="${linePath}" fill="none" stroke="${ACC}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${segs}
     ${dots}
     ${xLabels}
   </svg>`;
